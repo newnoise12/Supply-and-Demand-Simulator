@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supply & Demand Simulator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0 auto;
+      max-width: 800px;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .section {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    button {
+      padding: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Supply & Demand Simulator</h1>
+
+  <div class="section">
+    <h2>Your Resources</h2>
+    <p>Cash: <strong>£100</strong> | Labour: <strong>10</strong> | Materials: <strong>5</strong></p>
+  </div>
+
+  <div class="section">
+    <h2>Production</h2>
+    <p>Cost per unit: £5 (2 labour, 1 material)</p>
+    <label>Units to produce:</label>
+    <input type="number" id="units" value="1" min="1">
+    <button onclick="simulateProduction()">Produce</button>
+    <p id="prodOutput"></p>
+  </div>
+
+  <div class="section">
+    <h2>Set Your Price</h2>
+    <label>Price per unit:</label>
+    <input type="number" id="price" value="10" min="1">
+    <button onclick="submitPrice()">Submit Price</button>
+    <p id="priceOutput"></p>
+  </div>
+
+  <div class="section">
+    <h2>Market Events</h2>
+    <p>📰 Breaking: "Materials in short supply! Prices may rise next round."</p>
+  </div>
+
+  <div class="section">
+    <h2>Leaderboard</h2>
+    <textarea readonly>Group A: £130
+Group B: £120
+Group C: £105</textarea>
+  </div>
+
+  <script>
+    function simulateProduction() {
+      const units = parseInt(document.getElementById('units').value);
+      const cost = units * 5;
+      document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
+    }
+    function submitPrice() {
+      const price = document.getElementById('price').value;
+      document.getElementById('priceOutput').textContent = `You are selling each unit for £${price}.`;
+    }
+  </script>
+</body>
+</html>
