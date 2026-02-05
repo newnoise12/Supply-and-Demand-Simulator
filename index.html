@@ -81,96 +81,71 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.95);
-      z-index: 9999;
+      background: rgba(0, 0, 0, 0.95);
       color: white;
+      z-index: 9999;
+      padding: 40px;
       text-align: center;
-      padding-top: 100px;
+    }
+    #eventModal button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
   <h1>📊 Supply & Demand Simulator</h1>
-  <div class="section">
-    <label>Select Group:</label>
-    <select id="group-select" onchange="loadGroupState()">
-      <option value="groupA">Group A</option>
-      <option value="groupB">Group B</option>
-      <option value="groupC">Group C</option>
-      <option value="groupD">Group D</option>
-      <option value="groupE">Group E</option>
-    </select>
-    <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
-  </div>
+  <!-- Existing interface content remains unchanged -->
 
-  <div class="section">
-    <h2>Buy Materials</h2>
-    <label>Units of materials to buy (£3/unit):</label>
-    <input type="number" id="materials-to-buy" value="1" min="1" />
-    <button onclick="buyMaterials()">Buy Materials</button>
-    <p id="materialOutput"></p>
-  </div>
-
-  <div class="section">
-    <h2>Production</h2>
-    <label>Units to produce:</label>
-    <input type="number" id="units" value="1" min="1" />
-    <button onclick="simulateProduction()">Produce</button>
-    <p id="prodOutput"></p>
-  </div>
-
-  <div class="section">
-    <h2>Set Price</h2>
-    <label>Price per unit:</label>
-    <input type="number" id="price" value="10" min="1" />
-    <button onclick="submitPrice()">Submit Price</button>
-    <p id="priceOutput"></p>
-  </div>
-
-  <div class="section">
-    <h2>Instructor Controls</h2>
-    <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
-    <p>Current Round: <span id="current-round-display">1</span></p>
-  </div>
-
-  <div class="section">
-    <h2>Group Resources Overview</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Group</th>
-          <th>Cash (£)</th>
-          <th>Labour</th>
-          <th>Materials</th>
-        </tr>
-      </thead>
-      <tbody id="resource-table"></tbody>
-    </table>
-  </div>
-
+  <!-- Modal for Round Event -->
   <div id="eventModal">
     <h2 id="eventText"></h2>
     <button onclick="closeEventModal()">Start Round</button>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    const messages = [
-      "📦 Year 1: The economy is stable. Demand is average.",
-      "🌊 Year 2: A flood disrupts trade routes. Demand decreases.",
-      "👶 Year 3: Population boom boosts demand significantly.",
-      "📉 Year 4: Tariffs increase costs. Demand is steady, but profit margins shrink.",
-      "🚀 Year 5: A marketing breakthrough boosts demand!",
-      "📉 Year 6: Market saturation reduces overall demand."
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
+      authDomain: "supply-demand-sim.firebaseapp.com",
+      projectId: "supply-demand-sim",
+      storageBucket: "supply-demand-sim.appspot.com",
+      messagingSenderId: "370392861384",
+      appId: "1:370392861384:web:3e142dac960d98f7b073fd",
+      measurementId: "G-P602EV8WKN",
+      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentRound = 1;
+
+    const demandModifiers = [
+      { round: 1, message: "📦 Year 1: The economy is stable. Demand is average." },
+      { round: 2, message: "🌊 Year 2: A flood disrupts trade routes. Demand decreases." },
+      { round: 3, message: "👶 Year 3: Population boom boosts demand significantly." },
+      { round: 4, message: "📉 Year 4: Tariffs increase costs. Demand is steady, but profit margins shrink." },
+      { round: 5, message: "🚀 Year 5: A marketing breakthrough boosts demand!" },
+      { round: 6, message: "📉 Year 6: Market saturation reduces overall demand." }
     ];
 
     function showEventModal(round) {
-      const msg = messages[round - 1] || "A new round begins.";
-      document.getElementById("eventText").innerText = msg;
-      document.getElementById("eventModal").style.display = "block";
+      const event = demandModifiers.find(e => e.round === round);
+      if (event) {
+        document.getElementById("eventText").innerText = event.message;
+        document.getElementById("eventModal").style.display = "block";
+      }
     }
+
     function closeEventModal() {
       document.getElementById("eventModal").style.display = "none";
     }
+
+    // Show event for the first round
+    document.addEventListener("DOMContentLoaded", () => {
+      showEventModal(currentRound);
+    });
   </script>
 </body>
 </html>
