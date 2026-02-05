@@ -92,6 +92,14 @@
   </div>
 
   <div class="section">
+    <h2>Buy Materials</h2>
+    <label>Units of materials to buy (£3/unit):</label>
+    <input type="number" id="materials-to-buy" value="1" min="1" />
+    <button onclick="buyMaterials()">Buy Materials</button>
+    <p id="materialOutput"></p>
+  </div>
+
+  <div class="section">
     <h2>Production</h2>
     <label>Units to produce:</label>
     <input type="number" id="units" value="1" min="1" />
@@ -124,13 +132,10 @@
           <th>Materials</th>
         </tr>
       </thead>
-      <tbody id="resource-table">
-        <!-- Populated dynamically -->
-      </tbody>
+      <tbody id="resource-table"></tbody>
     </table>
   </div>
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
@@ -148,7 +153,7 @@
     const db = firebase.database();
     let currentRound = 1;
     const groupList = ['groupA','groupB','groupC','groupD','groupE'];
-    const defaultState = { cash: 100, labor: 10, materials: 5 };
+    const defaultState = { cash: 100, labor: 10, materials: 0 };
 
     function initializeGroupState(groupId) {
       db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
@@ -181,31 +186,52 @@
       });
     }
 
+    function buyMaterials() {
+      const groupId = document.getElementById('group-select').value;
+      const qty = parseInt(document.getElementById('materials-to-buy').value);
+      const cost = qty * 3;
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state.cash >= cost) {
+          const updatedCash = state.cash - cost;
+          const updatedMaterials = state.materials + qty;
+
+          db.ref(`groups/${groupId}/state`).update({
+            cash: updatedCash,
+            materials: updatedMaterials
+          });
+
+          document.getElementById("materialOutput").textContent = `Bought ${qty} units of materials for £${cost}.`;
+          loadGroupState();
+          updateOverviewTable();
+        } else {
+          document.getElementById("materialOutput").textContent = `Not enough cash.`;
+        }
+      });
+    }
+
     function simulateProduction() {
       const units = parseInt(document.getElementById('units').value);
       const groupId = document.getElementById('group-select').value;
-      const cost = units * 5;
       const labourNeeded = units * 2;
       const materialsNeeded = units * 1;
 
       db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
         const state = snapshot.val();
-        if (state.labor >= labourNeeded && state.materials >= materialsNeeded && state.cash >= cost) {
-          const newCash = state.cash - cost;
+        if (state.labor >= labourNeeded && state.materials >= materialsNeeded) {
           const newLabor = state.labor - labourNeeded;
           const newMaterials = state.materials - materialsNeeded;
 
-          db.ref(`groups/${groupId}/state`).set({
-            cash: newCash,
+          db.ref(`groups/${groupId}/state`).update({
             labor: newLabor,
             materials: newMaterials
           });
 
-          document.getElementById("cash-display").textContent = `£${newCash}`;
           document.getElementById("labour-display").textContent = newLabor;
           document.getElementById("materials-display").textContent = newMaterials;
 
-          document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
+          document.getElementById('prodOutput').textContent = `You produced ${units} units.`;
           updateOverviewTable();
         } else {
           document.getElementById('prodOutput').textContent = `Not enough resources to produce.`;
@@ -241,12 +267,17 @@
             const sold = Math.min(unitsSold, roundData.produced);
             const revenue = roundData.price * sold;
             const updatedCash = state.cash + revenue;
-            db.ref(`groups/${group}/state/cash`).set(updatedCash);
+
+            db.ref(`groups/${group}/state`).update({
+              cash: updatedCash,
+              labor: defaultState.labor
+            });
+
             db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
             db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
           }
         }
-        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
+        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed and labour refreshed.`);
         loadGroupState();
         updateOverviewTable();
       });
