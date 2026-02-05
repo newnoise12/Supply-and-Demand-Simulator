@@ -302,8 +302,19 @@ showEventModal(currentRound);
     document.getElementById("current-round-display").textContent = currentRound;
     if (currentRound <= maxRounds) showEventModal(currentRound);
     else alert("✅ Game complete! All 6 rounds finished.");
-    loadGroupState();
-    updateOverviewTable();
+    window.onload = function () {
+      Promise.all(groupList.map(groupId =>
+        db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+          if (!snapshot.exists()) {
+            return db.ref(`groups/${groupId}/state`).set(defaultState);
+          }
+        })
+      )).then(() => {
+        loadGroupState();
+        updateOverviewTable();
+        showEventModal(currentRound);
+      });
+    };
   });
         document.getElementById("current-round-display").textContent = currentRound;
         alert(`💰 Market resolved. Advanced to Round ${currentRound}. Revenue distributed and labour refreshed.`);
