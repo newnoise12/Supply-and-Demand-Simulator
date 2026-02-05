@@ -12,10 +12,6 @@
       padding: 20px;
       background-color: #2c2c2c;
       color: #f0f0f0;
-      background-image: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
-    }
-    h1, h2 {
-      text-align: center;
     }
     .section {
       border: 1px solid #555;
@@ -31,135 +27,50 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #45a049;
     }
     textarea {
       width: 100%;
-      height: 150px;
+      height: 100px;
       background-color: #1f1f1f;
       color: #fff;
       border: 1px solid #666;
     }
-    .group-selector {
-      background-color: #444;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #666;
-    }
-    .group-selector label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 5px;
-    }
-    #group-select {
-      padding: 6px 12px;
-      font-size: 1rem;
-      border-radius: 6px;
+    select, input {
+      padding: 6px;
+      border-radius: 5px;
       border: 1px solid #999;
       background-color: #222;
-      color: #fff;
-    }
-    .event-box {
-      background-color: #5a4646;
-      border: 2px dashed #c9a96d;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 10px;
-      font-size: 1.1rem;
-    }
-    #splash {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.95);
-      color: #f0e6d2;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      text-align: center;
-      padding: 40px;
-    }
-    #splash h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-    #splash button {
-      background-color: #c49e60;
-      border: none;
-      padding: 10px 20px;
-      font-size: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      color: #fff;
-    }
-    th, td {
-      padding: 8px;
-      border: 1px solid #888;
-      text-align: center;
-    }
-    th {
-      background-color: #555;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div id="splash">
-    <h1>🧵 The Mill on Calder Street (1810)</h1>
-    <p>You are a textile mill owner in Yorkshire during the Industrial Revolution. Manage labor, materials, and machinery while navigating market shocks, worker unrest, and unpredictable events. Compete with rival mill owners to sell cloth and survive industrial capitalism.</p>
-    <button onclick="startGame()">Enter the Simulation</button>
-  </div>
-
   <h1>📊 Supply & Demand Simulator</h1>
 
   <div class="section">
-    <h2>Instructor Controls</h2>
-    <button onclick="triggerEvent()">🎲 Trigger Event</button>
-    <button onclick="nextRound()">🔄 Next Round</button>
-    <button onclick="resolveMarket()">💰 Resolve Market</button>
-    <p>Current Round: <strong id="round-display">1</strong></p>
-    <div id="event-display" class="event-box" style="display:none;"></div>
-  </div>
-
-  <div class="section">
-    <h2>Your Resources</h2>
-    <p>Cash: <strong id="cash-display">£100</strong> | Labour: <strong id="labour-display">10</strong> | Materials: <strong id="materials-display">5</strong></p>
-    <div class="group-selector">
-      <label for="group-select">Select your group:</label>
-      <select id="group-select" onchange="loadGroupState()">
-        <option value="groupA">Group A</option>
-        <option value="groupB">Group B</option>
-        <option value="groupC">Group C</option>
-        <option value="groupD">Group D</option>
-        <option value="groupE">Group E</option>
-      </select>
-    </div>
+    <label>Select Group:</label>
+    <select id="group-select" onchange="loadGroupState()">
+      <option value="groupA">Group A</option>
+      <option value="groupB">Group B</option>
+      <option value="groupC">Group C</option>
+      <option value="groupD">Group D</option>
+      <option value="groupE">Group E</option>
+    </select>
+    <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
   </div>
 
   <div class="section">
     <h2>Production</h2>
-    <p>Cost per unit: £5 (2 labour, 1 material)</p>
     <label>Units to produce:</label>
-    <input type="number" id="units" value="1" min="1">
+    <input type="number" id="units" value="1" min="1" />
     <button onclick="simulateProduction()">Produce</button>
     <p id="prodOutput"></p>
   </div>
 
   <div class="section">
-    <h2>Set Your Price</h2>
+    <h2>Set Price</h2>
     <label>Price per unit:</label>
-    <input type="number" id="price" value="10" min="1">
+    <input type="number" id="price" value="10" min="1" />
     <button onclick="submitPrice()">Submit Price</button>
     <p id="priceOutput"></p>
   </div>
@@ -170,49 +81,48 @@
   </div>
 
   <div class="section">
-    <h2>Team Resources Overview</h2>
-    <table id="resource-table">
-      <thead>
-        <tr><th>Team</th><th>Cash</th><th>Labour</th><th>Materials</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <h2>History</h2>
+    <textarea readonly id="history-log"></textarea>
   </div>
 
-  <div class="section">
-    <h2>Action History</h2>
-    <textarea readonly id="history-log" rows="10"></textarea>
-  </div>
-
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
       authDomain: "supply-demand-sim.firebaseapp.com",
       projectId: "supply-demand-sim",
-      storageBucket: "supply-demand-sim.firebasestorage.app",
+      storageBucket: "supply-demand-sim.appspot.com",
       messagingSenderId: "370392861384",
       appId: "1:370392861384:web:3e142dac960d98f7b073fd",
       measurementId: "G-P602EV8WKN",
       databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let currentRound = 1;
 
-    function startGame() {
-      document.getElementById('splash').style.display = 'none';
-      loadGroupState();
+    const defaultState = { cash: 100, labor: 10, materials: 5 };
+
+    function initializeGroupState(groupId) {
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          db.ref(`groups/${groupId}/state`).set(defaultState);
+        }
+      });
     }
 
-    function nextRound() {
-      currentRound++;
-      document.getElementById("round-display").textContent = currentRound;
-      loadResourceTable();
+    function loadGroupState() {
+      const groupId = document.getElementById('group-select').value;
+      initializeGroupState(groupId);
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val() || defaultState;
+        document.getElementById("cash-display").textContent = `£${state.cash}`;
+        document.getElementById("labour-display").textContent = state.labor;
+        document.getElementById("materials-display").textContent = state.materials;
+      });
     }
 
     function simulateProduction() {
@@ -261,30 +171,6 @@
       document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
     }
 
-    function loadGroupState() {
-      const groupId = document.getElementById('group-select').value;
-      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        const state = snapshot.val();
-        if (state) {
-          document.getElementById("cash-display").textContent = `£${state.cash}`;
-          document.getElementById("labour-display").textContent = state.labor;
-          document.getElementById("materials-display").textContent = state.materials;
-        }
-      });
-    }
-
-    function loadResourceTable() {
-      db.ref("groups").once("value").then(snapshot => {
-        const data = snapshot.val();
-        const tbody = document.querySelector("#resource-table tbody");
-        tbody.innerHTML = "";
-        for (const group in data) {
-          const state = data[group].state || { cash: "-", labor: "-", materials: "-" };
-          tbody.innerHTML += `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
-        }
-      });
-    }
-
     function resolveMarket() {
       db.ref("groups").once("value").then(snapshot => {
         const groups = snapshot.val();
@@ -301,9 +187,8 @@
             db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
           }
         }
-        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
+        alert(`💰 Market resolved for Round ${currentRound}.`);
         loadGroupState();
-        loadResourceTable();
       });
     }
 
@@ -339,22 +224,6 @@
       }
       document.getElementById("leaderboard").value = leaderboard;
     });
-
-    function triggerEvent() {
-      const events = [
-        { title: "🧵 Luddite Sabotage", description: "Production is blocked this round — machines are damaged." },
-        { title: "📉 Market Crash in Leeds", description: "Max price drops to £10 — no one will pay more." },
-        { title: "👮 Factory Inspection", description: "Any group using child labor is fined £25." },
-        { title: "🛍️ Demand Surge in London", description: "Cloth sells for 2× price — bonus revenue round." },
-        { title: "🧶 Cotton Shipment Lost at Sea", description: "No new materials — groups may not produce new units." },
-        { title: "⛅ Flooding Halts Work", description: "Production is paused for all groups this round." }
-      ];
-
-      const randomEvent = events[Math.floor(Math.random() * events.length)];
-      const display = document.getElementById("event-display");
-      display.style.display = "block";
-      display.innerHTML = `<strong>${randomEvent.title}</strong><br>${randomEvent.description}`;
-    }
   </script>
 </body>
 </html>
