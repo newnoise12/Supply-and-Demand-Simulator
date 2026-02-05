@@ -53,6 +53,8 @@
       <option value="groupA">Group A</option>
       <option value="groupB">Group B</option>
       <option value="groupC">Group C</option>
+      <option value="groupD">Group D</option>
+      <option value="groupE">Group E</option>
     </select>
     <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
   </div>
@@ -74,9 +76,13 @@
   </div>
 
   <div class="section">
-    <h2>Instructor Controls</h2>
-    <button onclick="resolveMarket()">💰 Resolve Market</button>
-    <p>Current Round: <span id="current-round-display">1</span></p>
+    <h2>Leaderboard</h2>
+    <textarea readonly id="leaderboard"></textarea>
+  </div>
+
+  <div class="section">
+    <h2>History</h2>
+    <textarea readonly id="history-log"></textarea>
   </div>
 
   <!-- Firebase SDK -->
@@ -110,6 +116,7 @@
     function loadGroupState() {
       const groupId = document.getElementById('group-select').value;
       initializeGroupState(groupId);
+
       db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
         const state = snapshot.val() || defaultState;
         document.getElementById("cash-display").textContent = `£${state.cash}`;
@@ -173,23 +180,50 @@
           const lastRoundKey = `round${currentRound}`;
           const roundData = rounds[lastRoundKey];
           if (roundData && roundData.price && roundData.produced) {
-            const unitsSold = Math.max(0, 100 - roundData.price * 2);
-            const sold = Math.min(unitsSold, roundData.produced);
-            const revenue = roundData.price * sold;
+            const revenue = roundData.price * roundData.produced;
             const updatedCash = state.cash + revenue;
+
             db.ref(`groups/${group}/state/cash`).set(updatedCash);
             db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
-            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
           }
         }
-        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
+        alert(`💰 Market resolved for Round ${currentRound}.`);
         loadGroupState();
       });
     }
 
-    setInterval(() => {
-      document.getElementById("current-round-display").textContent = currentRound;
-    }, 1000);
+    function loadHistory() {
+      db.ref("groups").once("value").then(snapshot => {
+        const groups = snapshot.val();
+        let log = "";
+        for (const group in groups) {
+          const rounds = Object.entries(groups[group]).filter(([k]) => k.startsWith("round"));
+          log += `--- ${group.toUpperCase()} ---\n`;
+          rounds.forEach(([round, data]) => {
+            log += `${round}: ${data.produced} units @ £${data.price} = £${data.revenue || "?"}\n`;
+          });
+          log += "\n";
+        }
+        document.getElementById("history-log").value = log;
+      });
+    }
+
+    setInterval(loadHistory, 5000);
+
+    db.ref("groups").on("value", (snapshot) => {
+      const data = snapshot.val();
+      let leaderboard = "";
+      for (let group in data) {
+        const rounds = Object.entries(data[group]).filter(([k]) => k.startsWith("round"));
+        const last = rounds.pop();
+        if (last) {
+          const [round, stats] = last;
+          const cash = data[group].state ? data[group].state.cash : "?";
+          leaderboard += `${group} — £${cash} | Units: ${stats.produced} @ £${stats.price}\n`;
+        }
+      }
+      document.getElementById("leaderboard").value = leaderboard;
+    });
   </script>
 </body>
 </html>
