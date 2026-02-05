@@ -60,6 +60,20 @@
     h2 {
       color: #add8e6;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #1f1f1f;
+    }
+    th, td {
+      border: 1px solid #666;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #333;
+    }
   </style>
 </head>
 <body>
@@ -71,6 +85,8 @@
       <option value="groupA">Group A</option>
       <option value="groupB">Group B</option>
       <option value="groupC">Group C</option>
+      <option value="groupD">Group D</option>
+      <option value="groupE">Group E</option>
     </select>
     <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
   </div>
@@ -97,6 +113,23 @@
     <p>Current Round: <span id="current-round-display">1</span></p>
   </div>
 
+  <div class="section">
+    <h2>Group Resources Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th>Cash (£)</th>
+          <th>Labour</th>
+          <th>Materials</th>
+        </tr>
+      </thead>
+      <tbody id="resource-table">
+        <!-- Populated dynamically -->
+      </tbody>
+    </table>
+  </div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -114,7 +147,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let currentRound = 1;
-
+    const groupList = ['groupA','groupB','groupC','groupD','groupE'];
     const defaultState = { cash: 100, labor: 10, materials: 5 };
 
     function initializeGroupState(groupId) {
@@ -133,6 +166,18 @@
         document.getElementById("cash-display").textContent = `£${state.cash}`;
         document.getElementById("labour-display").textContent = state.labor;
         document.getElementById("materials-display").textContent = state.materials;
+      });
+    }
+
+    function updateOverviewTable() {
+      const table = document.getElementById("resource-table");
+      table.innerHTML = "";
+      groupList.forEach(group => {
+        db.ref(`groups/${group}/state`).once("value").then(snapshot => {
+          const state = snapshot.val() || defaultState;
+          const row = `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
+          table.innerHTML += row;
+        });
       });
     }
 
@@ -161,6 +206,7 @@
           document.getElementById("materials-display").textContent = newMaterials;
 
           document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
+          updateOverviewTable();
         } else {
           document.getElementById('prodOutput').textContent = `Not enough resources to produce.`;
         }
@@ -202,12 +248,16 @@
         }
         alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
         loadGroupState();
+        updateOverviewTable();
       });
     }
 
     setInterval(() => {
       document.getElementById("current-round-display").textContent = currentRound;
     }, 1000);
+
+    loadGroupState();
+    updateOverviewTable();
   </script>
 </body>
 </html>
