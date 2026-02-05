@@ -38,7 +38,7 @@
     }
     textarea {
       width: 100%;
-      height: 100px;
+      height: 150px;
     }
   </style>
 </head>
@@ -47,7 +47,7 @@
 
   <div class="section">
     <h2>Your Resources</h2>
-    <p>Cash: <strong>£100</strong> | Labour: <strong>10</strong> | Materials: <strong>5</strong></p>
+    <p>Cash: <strong id="cash-display">£100</strong> | Labour: <strong>10</strong> | Materials: <strong>5</strong></p>
   </div>
 
   <div class="section">
@@ -74,44 +74,73 @@
 
   <div class="section">
     <h2>Leaderboard</h2>
-    <textarea readonly>Group A: £130
-Group B: £120
-Group C: £105</textarea>
+    <textarea readonly id="leaderboard"></textarea>
   </div>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
+      authDomain: "supply-demand-sim.firebaseapp.com",
+      projectId: "supply-demand-sim",
+      storageBucket: "supply-demand-sim.firebasestorage.app",
+      messagingSenderId: "370392861384",
+      appId: "1:370392861384:web:3e142dac960d98f7b073fd",
+      measurementId: "G-P602EV8WKN",
+      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const groupId = "groupA"; // Replace with dynamic ID per group
+    const currentRound = "round1";
+
     function simulateProduction() {
       const units = parseInt(document.getElementById('units').value);
       const cost = units * 5;
       document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
     }
+
     function submitPrice() {
-      const price = document.getElementById('price').value;
-      document.getElementById('priceOutput').textContent = `You are selling each unit for £${price}.`;
+      const price = parseFloat(document.getElementById('price').value);
+      const produced = parseInt(document.getElementById('units').value);
+      const cashRemaining = 100 - (produced * 5); // Sample calc
+
+      const data = {
+        price,
+        produced,
+        cash: cashRemaining,
+        timestamp: Date.now()
+      };
+
+      db.ref(`groups/${groupId}/${currentRound}`).set(data)
+        .then(() => {
+          document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+          document.getElementById("cash-display").textContent = `£${cashRemaining}`;
+        })
+        .catch((err) => {
+          console.error("Error writing to Firebase:", err);
+        });
     }
+
+    db.ref("groups").on("value", (snapshot) => {
+      const data = snapshot.val();
+      let leaderboard = "";
+
+      for (let group in data) {
+        const rounds = data[group];
+        const latest = Object.keys(rounds).pop();
+        const stats = rounds[latest];
+
+        leaderboard += `${group} — £${stats.cash} | Units: ${stats.produced} @ £${stats.price}\n`;
+      }
+
+      document.getElementById("leaderboard").value = leaderboard;
+    });
   </script>
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-<script>
-  // Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
-    authDomain: "supply-demand-sim.firebaseapp.com",
-    projectId: "supply-demand-sim",
-    storageBucket: "supply-demand-sim.firebasestorage.app",
-    messagingSenderId: "370392861384",
-    appId: "1:370392861384:web:3e142dac960d98f7b073fd",
-    measurementId: "G-P602EV8WKN",
-    databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-
-  // Reference to the database
-  const db = firebase.database();
-</script>
 </body>
 </html>
