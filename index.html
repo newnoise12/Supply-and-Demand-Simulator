@@ -75,6 +75,14 @@
     <p id="priceOutput"></p>
   </div>
 
+  <!-- Instructor Controls UI -->
+  <div class="section" style="background:#444; padding:16px; border:2px solid #777;">
+    <h2>🧑‍🏫 Instructor Controls</h2>
+    <button onclick="resolveMarket()">💰 Resolve Market</button>
+    <button onclick="advanceRound()">➡️ Advance Round</button>
+    <p>Current Round: <span id="current-round-display">1</span></p>
+  </div>
+
   <div class="section">
     <h2>Leaderboard</h2>
     <textarea readonly id="leaderboard"></textarea>
@@ -116,7 +124,6 @@
     function loadGroupState() {
       const groupId = document.getElementById('group-select').value;
       initializeGroupState(groupId);
-
       db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
         const state = snapshot.val() || defaultState;
         document.getElementById("cash-display").textContent = `£${state.cash}`;
@@ -182,48 +189,23 @@
           if (roundData && roundData.price && roundData.produced) {
             const revenue = roundData.price * roundData.produced;
             const updatedCash = state.cash + revenue;
-
             db.ref(`groups/${group}/state/cash`).set(updatedCash);
             db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
           }
         }
-        alert(`💰 Market resolved for Round ${currentRound}.`);
+        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
         loadGroupState();
       });
     }
 
-    function loadHistory() {
-      db.ref("groups").once("value").then(snapshot => {
-        const groups = snapshot.val();
-        let log = "";
-        for (const group in groups) {
-          const rounds = Object.entries(groups[group]).filter(([k]) => k.startsWith("round"));
-          log += `--- ${group.toUpperCase()} ---\n`;
-          rounds.forEach(([round, data]) => {
-            log += `${round}: ${data.produced} units @ £${data.price} = £${data.revenue || "?"}\n`;
-          });
-          log += "\n";
-        }
-        document.getElementById("history-log").value = log;
-      });
+    function advanceRound() {
+      currentRound++;
+      alert(`🔄 Moved to Round ${currentRound}`);
     }
 
-    setInterval(loadHistory, 5000);
-
-    db.ref("groups").on("value", (snapshot) => {
-      const data = snapshot.val();
-      let leaderboard = "";
-      for (let group in data) {
-        const rounds = Object.entries(data[group]).filter(([k]) => k.startsWith("round"));
-        const last = rounds.pop();
-        if (last) {
-          const [round, stats] = last;
-          const cash = data[group].state ? data[group].state.cash : "?";
-          leaderboard += `${group} — £${cash} | Units: ${stats.produced} @ £${stats.price}\n`;
-        }
-      }
-      document.getElementById("leaderboard").value = leaderboard;
-    });
+    setInterval(() => {
+      document.getElementById("current-round-display").textContent = currentRound;
+    }, 1000);
   </script>
 </body>
 </html>
