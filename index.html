@@ -117,7 +117,7 @@
 
   <div class="section">
     <h2>Instructor Controls</h2>
-    <button onclick="resolveMarket()">💰 Resolve Market</button>
+    <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
     <p>Current Round: <span id="current-round-display">1</span></p>
   </div>
 
@@ -277,7 +277,9 @@
             db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
           }
         }
-        alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed and labour refreshed.`);
+        currentRound++;
+        document.getElementById("current-round-display").textContent = currentRound;
+        alert(`💰 Market resolved. Advanced to Round ${currentRound}. Revenue distributed and labour refreshed.`);
         loadGroupState();
         updateOverviewTable();
       });
