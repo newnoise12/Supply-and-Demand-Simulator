@@ -71,28 +71,62 @@
       border-radius: 10px;
       font-size: 1.1rem;
     }
+    #splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.95);
+      color: #f0e6d2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      text-align: center;
+      padding: 40px;
+    }
+    #splash h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    #splash button {
+      background-color: #c49e60;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <div id="splash">
+    <h1>🧵 The Mill on Calder Street (1810)</h1>
+    <p>You are a textile mill owner in Yorkshire during the Industrial Revolution. Manage labor, materials, and machinery while navigating market shocks, worker unrest, and unpredictable events. Compete with rival mill owners to sell cloth and survive industrial capitalism.</p>
+    <button onclick="startGame()">Enter the Simulation</button>
+  </div>
+
   <h1>📊 Supply & Demand Simulator</h1>
 
   <div class="section">
     <h2>Instructor Controls</h2>
     <button onclick="triggerEvent()">🎲 Trigger Event</button>
+    <button onclick="nextRound()">🔄 Next Round</button>
+    <p>Current Round: <strong id="round-display">1</strong></p>
     <div id="event-display" class="event-box" style="display:none;"></div>
   </div>
 
   <div class="section">
     <h2>Your Resources</h2>
-    <p>Cash: <strong id="cash-display">£100</strong> | Labour: <strong>10</strong> | Materials: <strong>5</strong></p>
+    <p>Cash: <strong id="cash-display">£100</strong> | Labour: <strong id="labour-display">10</strong> | Materials: <strong id="materials-display">5</strong></p>
     <div class="group-selector">
       <label for="group-select">Select your group:</label>
-      <select id="group-select">
+      <select id="group-select" onchange="loadGroupState()">
         <option value="groupA">Group A</option>
         <option value="groupB">Group B</option>
         <option value="groupC">Group C</option>
-        <option value="groupC">Group D</option>
-        <option value="groupE">Group D</option>
       </select>
     </div>
   </div>
@@ -138,49 +172,88 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const currentRound = "round1";
+    let currentRound = 1;
+
+    function startGame() {
+      document.getElementById('splash').style.display = 'none';
+      loadGroupState();
+    }
+
+    function nextRound() {
+      currentRound++;
+      document.getElementById("round-display").textContent = currentRound;
+    }
 
     function simulateProduction() {
       const units = parseInt(document.getElementById('units').value);
+      const groupId = document.getElementById('group-select').value;
       const cost = units * 5;
-      document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
+      const labourNeeded = units * 2;
+      const materialsNeeded = units * 1;
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state.labor >= labourNeeded && state.materials >= materialsNeeded && state.cash >= cost) {
+          const newCash = state.cash - cost;
+          const newLabor = state.labor - labourNeeded;
+          const newMaterials = state.materials - materialsNeeded;
+
+          db.ref(`groups/${groupId}/state`).set({
+            cash: newCash,
+            labor: newLabor,
+            materials: newMaterials
+          });
+
+          document.getElementById("cash-display").textContent = `£${newCash}`;
+          document.getElementById("labour-display").textContent = newLabor;
+          document.getElementById("materials-display").textContent = newMaterials;
+
+          document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
+        } else {
+          document.getElementById('prodOutput').textContent = `Not enough resources to produce.`;
+        }
+      });
     }
 
     function submitPrice() {
       const price = parseFloat(document.getElementById('price').value);
       const produced = parseInt(document.getElementById('units').value);
       const groupId = document.getElementById('group-select').value;
-      const cashRemaining = 100 - (produced * 5);
+      const roundKey = `round${currentRound}`;
 
-      const data = {
+      db.ref(`groups/${groupId}/${roundKey}`).set({
         price,
         produced,
-        cash: cashRemaining,
         timestamp: Date.now()
-      };
+      });
 
-      db.ref(`groups/${groupId}/${currentRound}`).set(data)
-        .then(() => {
-          document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
-          document.getElementById("cash-display").textContent = `£${cashRemaining}`;
-        })
-        .catch((err) => {
-          console.error("Error writing to Firebase:", err);
-        });
+      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+    }
+
+    function loadGroupState() {
+      const groupId = document.getElementById('group-select').value;
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state) {
+          document.getElementById("cash-display").textContent = `£${state.cash}`;
+          document.getElementById("labour-display").textContent = state.labor;
+          document.getElementById("materials-display").textContent = state.materials;
+        }
+      });
     }
 
     db.ref("groups").on("value", (snapshot) => {
       const data = snapshot.val();
       let leaderboard = "";
-
       for (let group in data) {
-        const rounds = data[group];
-        const latest = Object.keys(rounds).pop();
-        const stats = rounds[latest];
-
-        leaderboard += `${group} — £${stats.cash} | Units: ${stats.produced} @ £${stats.price}\n`;
+        const rounds = Object.entries(data[group]).filter(([k]) => k.startsWith("round"));
+        const last = rounds.pop();
+        if (last) {
+          const [round, stats] = last;
+          const cash = data[group].state ? data[group].state.cash : "?";
+          leaderboard += `${group} — £${cash} | Units: ${stats.produced} @ £${stats.price}\n`;
+        }
       }
-
       document.getElementById("leaderboard").value = leaderboard;
     });
 
