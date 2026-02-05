@@ -24,11 +24,6 @@
       padding: 16px;
       margin-bottom: 20px;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
     button {
       padding: 10px;
       background: #4CAF50;
@@ -36,6 +31,7 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      margin-top: 10px;
     }
     button:hover {
       background: #45a049;
@@ -67,10 +63,24 @@
       background-color: #222;
       color: #fff;
     }
+    .event-box {
+      background-color: #5a4646;
+      border: 2px dashed #c9a96d;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 10px;
+      font-size: 1.1rem;
+    }
   </style>
 </head>
 <body>
   <h1>📊 Supply & Demand Simulator</h1>
+
+  <div class="section">
+    <h2>Instructor Controls</h2>
+    <button onclick="triggerEvent()">🎲 Trigger Event</button>
+    <div id="event-display" class="event-box" style="display:none;"></div>
+  </div>
 
   <div class="section">
     <h2>Your Resources</h2>
@@ -100,11 +110,6 @@
     <input type="number" id="price" value="10" min="1">
     <button onclick="submitPrice()">Submit Price</button>
     <p id="priceOutput"></p>
-  </div>
-
-  <div class="section">
-    <h2>Market Events</h2>
-    <p>📰 Breaking: "Materials in short supply! Prices may rise next round."</p>
   </div>
 
   <div class="section">
@@ -176,6 +181,22 @@
 
       document.getElementById("leaderboard").value = leaderboard;
     });
+
+    function triggerEvent() {
+      const events = [
+        { title: "🧵 Luddite Sabotage", description: "Production is blocked this round — machines are damaged." },
+        { title: "📉 Market Crash in Leeds", description: "Max price drops to £10 — no one will pay more." },
+        { title: "👮 Factory Inspection", description: "Any group using child labor is fined £25." },
+        { title: "🛍️ Demand Surge in London", description: "Cloth sells for 2× price — bonus revenue round." },
+        { title: "🧶 Cotton Shipment Lost at Sea", description: "No new materials — groups may not produce new units." },
+        { title: "⛅ Flooding Halts Work", description: "Production is paused for all groups this round." }
+      ];
+
+      const randomEvent = events[Math.floor(Math.random() * events.length)];
+      const display = document.getElementById("event-display");
+      display.style.display = "block";
+      display.innerHTML = `<strong>${randomEvent.title}</strong><br>${randomEvent.description}`;
+    }
   </script>
 </body>
 </html>
