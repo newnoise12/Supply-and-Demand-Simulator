@@ -212,7 +212,9 @@ const demandModifiers = [
           });
 
           document.getElementById("materialOutput").textContent = `Bought ${qty} units of materials for £${cost}.`;
-          loadGroupState();
+          loadGroupState();groupList.forEach(groupId => {
+  initializeGroupState(groupId);
+});
 showEventModal(currentRound);
           updateOverviewTable();
         } else {
