@@ -53,8 +53,6 @@
       <option value="groupA">Group A</option>
       <option value="groupB">Group B</option>
       <option value="groupC">Group C</option>
-      <option value="groupD">Group D</option>
-      <option value="groupE">Group E</option>
     </select>
     <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
   </div>
@@ -75,28 +73,10 @@
     <p id="priceOutput"></p>
   </div>
 
-  <div class="section" style="background:#444; padding:16px; border:2px solid #777;">
-  <h2>🧑‍🏫 Instructor Controls</h2>
-  <button onclick="resolveMarket()">💰 Resolve Market</button>
-  <button onclick="advanceRound()">➡️ Advance Round</button>
-  <p>Current Round: <span id="current-round-display">1</span></p>
-</div>
-
-<!-- Market Events -->
-<div class="section">
-  <h2>📢 Market Events</h2>
-  <button onclick="triggerMarketEvent()">Trigger Market Event</button>
-  <p id="event-output"></p>
-</div>
-
   <div class="section">
-    <h2>Leaderboard</h2>
-    <textarea readonly id="leaderboard"></textarea>
-  </div>
-
-  <div class="section">
-    <h2>History</h2>
-    <textarea readonly id="history-log"></textarea>
+    <h2>Instructor Controls</h2>
+    <button onclick="resolveMarket()">💰 Resolve Market</button>
+    <p>Current Round: <span id="current-round-display">1</span></p>
   </div>
 
   <!-- Firebase SDK -->
@@ -185,35 +165,21 @@
     }
 
     function resolveMarket() {
-  db.ref("groups").once("value").then(snapshot => {
-    const groups = snapshot.val();
-    for (let group in groups) {
-      const rounds = groups[group];
-      const state = rounds.state || { cash: 0 };
-      const lastRoundKey = `round${currentRound}`;
-      const roundData = rounds[lastRoundKey];
-      if (roundData && roundData.price && roundData.produced) {
-        // Apply demand curve: units sold = max(0, 100 - price * 2)
-        const unitsSold = Math.max(0, 100 - roundData.price * 2);
-        const sold = Math.min(unitsSold, roundData.produced);
-        const revenue = roundData.price * sold;
-        const updatedCash = state.cash + revenue;
-        db.ref(`groups/${group}/state/cash`).set(updatedCash);
-        db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
-        db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
-      }
-    }
-    alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
-    loadGroupState();
-  });
-};
+      db.ref("groups").once("value").then(snapshot => {
+        const groups = snapshot.val();
+        for (let group in groups) {
+          const rounds = groups[group];
+          const state = rounds.state || { cash: 0 };
           const lastRoundKey = `round${currentRound}`;
           const roundData = rounds[lastRoundKey];
           if (roundData && roundData.price && roundData.produced) {
-            const revenue = roundData.price * roundData.produced;
+            const unitsSold = Math.max(0, 100 - roundData.price * 2);
+            const sold = Math.min(unitsSold, roundData.produced);
+            const revenue = roundData.price * sold;
             const updatedCash = state.cash + revenue;
             db.ref(`groups/${group}/state/cash`).set(updatedCash);
             db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
+            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
           }
         }
         alert(`💰 Market resolved for Round ${currentRound}. Revenue distributed.`);
@@ -221,44 +187,9 @@
       });
     }
 
-    function advanceRound() {
-      currentRound++;
-      alert(`🔄 Moved to Round ${currentRound}`);
-    }
-
-    $1
-
-  function triggerMarketEvent() {
-  const events = [
-    { text: "🌧️ Poor harvest: -2 materials", effect: (state) => ({ ...state, materials: Math.max(0, state.materials - 2) }) },
-    { text: "🔧 Machinery breakdown: -£20", effect: (state) => ({ ...state, cash: Math.max(0, state.cash - 20) }) },
-    { text: "😷 Illness: -3 labor", effect: (state) => ({ ...state, labor: Math.max(0, state.labor - 3) }) },
-    { text: "📉 Market crash: -10% cash", effect: (state) => ({ ...state, cash: Math.floor(state.cash * 0.9) }) },
-    { text: "🔥 Factory fire: -1 material, -1 labor", effect: (state) => ({ ...state, materials: Math.max(0, state.materials - 1), labor: Math.max(0, state.labor - 1) }) }
-  ];
-  const selected = events[Math.floor(Math.random() * events.length)];
-  const groupId = document.getElementById('group-select').value;
-  db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-    const state = snapshot.val();
-    const newState = selected.effect(state);
-    db.ref(`groups/${groupId}/state`).set(newState);
-    document.getElementById("event-output").textContent = `${selected.text} applied to ${groupId}`;
-    loadGroupState();
-  });
-}
+    setInterval(() => {
+      document.getElementById("current-round-display").textContent = currentRound;
+    }, 1000);
   </script>
-<div id="splash-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#111;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;">
-  <h1>🧵 Welcome to the Industrial Economy Simulator</h1>
-  <p>Step into the shoes of a 19th-century factory owner navigating supply, demand, and disruption.</p>
-  <button onclick="hideSplash()" style="margin-top:20px; padding:10px 20px; font-size:18px;">Enter Simulation</button>
-</div>
-<script>
-  function hideSplash() {
-    document.getElementById("splash-screen").style.display = "none";
-  }
-  setInterval(() => {
-    document.getElementById("current-round-display").textContent = currentRound;
-  }, 1000);
-</script>
 </body>
 </html>
