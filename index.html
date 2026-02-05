@@ -74,11 +74,23 @@
     th {
       background-color: #333;
     }
+    #eventModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 9999;
+      color: white;
+      text-align: center;
+      padding-top: 100px;
+    }
   </style>
 </head>
 <body>
   <h1>📊 Supply & Demand Simulator</h1>
-
   <div class="section">
     <label>Select Group:</label>
     <select id="group-select" onchange="loadGroupState()">
@@ -136,161 +148,29 @@
     </table>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <div id="eventModal">
+    <h2 id="eventText"></h2>
+    <button onclick="closeEventModal()">Start Round</button>
+  </div>
+
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
-      authDomain: "supply-demand-sim.firebaseapp.com",
-      projectId: "supply-demand-sim",
-      storageBucket: "supply-demand-sim.appspot.com",
-      messagingSenderId: "370392861384",
-      appId: "1:370392861384:web:3e142dac960d98f7b073fd",
-      measurementId: "G-P602EV8WKN",
-      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let currentRound = 1;
-    const groupList = ['groupA','groupB','groupC','groupD','groupE'];
-    const defaultState = { cash: 100, labor: 10, materials: 0 };
+    const messages = [
+      "📦 Year 1: The economy is stable. Demand is average.",
+      "🌊 Year 2: A flood disrupts trade routes. Demand decreases.",
+      "👶 Year 3: Population boom boosts demand significantly.",
+      "📉 Year 4: Tariffs increase costs. Demand is steady, but profit margins shrink.",
+      "🚀 Year 5: A marketing breakthrough boosts demand!",
+      "📉 Year 6: Market saturation reduces overall demand."
+    ];
 
-    function initializeGroupState(groupId) {
-      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        if (!snapshot.exists()) {
-          db.ref(`groups/${groupId}/state`).set(defaultState);
-        }
-      });
+    function showEventModal(round) {
+      const msg = messages[round - 1] || "A new round begins.";
+      document.getElementById("eventText").innerText = msg;
+      document.getElementById("eventModal").style.display = "block";
     }
-
-    function loadGroupState() {
-      const groupId = document.getElementById('group-select').value;
-      initializeGroupState(groupId);
-      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        const state = snapshot.val() || defaultState;
-        document.getElementById("cash-display").textContent = `£${state.cash}`;
-        document.getElementById("labour-display").textContent = state.labor;
-        document.getElementById("materials-display").textContent = state.materials;
-      });
+    function closeEventModal() {
+      document.getElementById("eventModal").style.display = "none";
     }
-
-    function updateOverviewTable() {
-      const table = document.getElementById("resource-table");
-      table.innerHTML = "";
-      groupList.forEach(group => {
-        db.ref(`groups/${group}/state`).once("value").then(snapshot => {
-          const state = snapshot.val() || defaultState;
-          const row = `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
-          table.innerHTML += row;
-        });
-      });
-    }
-
-    function buyMaterials() {
-      const groupId = document.getElementById('group-select').value;
-      const qty = parseInt(document.getElementById('materials-to-buy').value);
-      const cost = qty * 3;
-
-      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        const state = snapshot.val();
-        if (state.cash >= cost) {
-          const updatedCash = state.cash - cost;
-          const updatedMaterials = state.materials + qty;
-
-          db.ref(`groups/${groupId}/state`).update({
-            cash: updatedCash,
-            materials: updatedMaterials
-          });
-
-          document.getElementById("materialOutput").textContent = `Bought ${qty} units of materials for £${cost}.`;
-          loadGroupState();
-          updateOverviewTable();
-        } else {
-          document.getElementById("materialOutput").textContent = `Not enough cash to buy materials.`;
-        }
-      });
-    }
-
-    function simulateProduction() {
-      const units = parseInt(document.getElementById('units').value);
-      const groupId = document.getElementById('group-select').value;
-      const labourNeeded = units * 2;
-      const materialsNeeded = units * 1;
-
-      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        const state = snapshot.val();
-        if (state.labor >= labourNeeded && state.materials >= materialsNeeded) {
-          const newLabor = state.labor - labourNeeded;
-          const newMaterials = state.materials - materialsNeeded;
-
-          db.ref(`groups/${groupId}/state`).update({
-            labor: newLabor,
-            materials: newMaterials
-          });
-
-          document.getElementById("labour-display").textContent = newLabor;
-          document.getElementById("materials-display").textContent = newMaterials;
-
-          document.getElementById('prodOutput').textContent = `You produced ${units} units.`;
-          updateOverviewTable();
-        } else {
-          document.getElementById('prodOutput').textContent = `❌ Not enough labour or materials to produce that amount.`;
-        }
-      });
-    }
-
-    function submitPrice() {
-      const price = parseFloat(document.getElementById('price').value);
-      const produced = parseInt(document.getElementById('units').value);
-      const groupId = document.getElementById('group-select').value;
-      const roundKey = `round${currentRound}`;
-
-      db.ref(`groups/${groupId}/${roundKey}`).set({
-        price,
-        produced,
-        timestamp: Date.now()
-      });
-
-      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
-    }
-
-    function resolveMarket() {
-      db.ref("groups").once("value").then(snapshot => {
-        const groups = snapshot.val();
-        for (let group in groups) {
-          const rounds = groups[group];
-          const state = rounds.state || { cash: 0 };
-          const lastRoundKey = `round${currentRound}`;
-          const roundData = rounds[lastRoundKey];
-          if (roundData && roundData.price && roundData.produced) {
-            const unitsSold = Math.max(0, 100 - roundData.price * 2);
-            const sold = Math.min(unitsSold, roundData.produced);
-            const revenue = roundData.price * sold;
-            const updatedCash = state.cash + revenue;
-
-            db.ref(`groups/${group}/state`).update({
-              cash: updatedCash,
-              labor: defaultState.labor
-            });
-
-            db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
-            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
-          }
-        }
-        currentRound++;
-        document.getElementById("current-round-display").textContent = currentRound;
-        alert(`💰 Market resolved. Advanced to Round ${currentRound}. Revenue distributed and labour refreshed.`);
-        loadGroupState();
-        updateOverviewTable();
-      });
-    }
-
-    setInterval(() => {
-      document.getElementById("current-round-display").textContent = currentRound;
-    }, 1000);
-
-    loadGroupState();
-    updateOverviewTable();
   </script>
 </body>
 </html>
