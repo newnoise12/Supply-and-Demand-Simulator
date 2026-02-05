@@ -49,7 +49,7 @@
       border-radius: 5px;
       border: 1px solid #999;
       background-color: #222;
-      color: white;what's up
+      color: white;
       margin-top: 5px;
       margin-bottom: 10px;
     }
@@ -152,15 +152,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let currentRound = 1;
-const maxRounds = 6;
-const demandModifiers = [
-  { round: 1, baseDemand: 100, priceModifier: 2, message: "📦 Year 1: The economy is stable. Demand is average." },
-  { round: 2, baseDemand: 80, priceModifier: 2.2, message: "🌊 Year 2: A flood disrupts trade routes. Demand decreases." },
-  { round: 3, baseDemand: 130, priceModifier: 1.8, message: "👶 Year 3: Population boom boosts demand significantly." },
-  { round: 4, baseDemand: 100, priceModifier: 2.5, message: "📉 Year 4: Tariffs increase costs. Demand is steady, but profit margins shrink." },
-  { round: 5, baseDemand: 120, priceModifier: 1.5, message: "🚀 Year 5: A marketing breakthrough boosts demand!" },
-  { round: 6, baseDemand: 60, priceModifier: 3, message: "📉 Year 6: Market saturation reduces overall demand." }
-];
     const groupList = ['groupA','groupB','groupC','groupD','groupE'];
     const defaultState = { cash: 100, labor: 10, materials: 0 };
 
@@ -213,10 +204,6 @@ const demandModifiers = [
 
           document.getElementById("materialOutput").textContent = `Bought ${qty} units of materials for £${cost}.`;
           loadGroupState();
-groupList.forEach(groupId => {
-  initializeGroupState(groupId);
-});
-showEventModal(currentRound);
           updateOverviewTable();
         } else {
           document.getElementById("materialOutput").textContent = `Not enough cash to buy materials.`;
@@ -268,54 +255,29 @@ showEventModal(currentRound);
     }
 
     function resolveMarket() {
-  if (currentRound > maxRounds) {
-    alert("Game over! All rounds completed.");
-    return;
-  }
-  const demandEvent = demandModifiers.find(e => e.round === currentRound);
-  const demand = demandEvent ? demandEvent.baseDemand : 100;
-  const priceMod = demandEvent ? demandEvent.priceModifier : 2;
+      db.ref("groups").once("value").then(snapshot => {
+        const groups = snapshot.val();
+        for (let group in groups) {
+          const rounds = groups[group];
+          const state = rounds.state || { cash: 0 };
+          const lastRoundKey = `round${currentRound}`;
+          const roundData = rounds[lastRoundKey];
+          if (roundData && roundData.price && roundData.produced) {
+            const unitsSold = Math.max(0, 100 - roundData.price * 2);
+            const sold = Math.min(unitsSold, roundData.produced);
+            const revenue = roundData.price * sold;
+            const updatedCash = state.cash + revenue;
 
-  db.ref("groups").once("value").then(snapshot => {
-    const groups = snapshot.val();
-    for (let group in groups) {
-      const rounds = groups[group];
-      const state = rounds.state || { cash: 0 };
-      const lastRoundKey = `round${currentRound}`;
-      const roundData = rounds[lastRoundKey];
-      if (roundData && roundData.price && roundData.produced) {
-        const unitsSold = Math.max(0, demand - roundData.price * priceMod);
-        const sold = Math.min(unitsSold, roundData.produced);
-        const revenue = roundData.price * sold;
-        const updatedCash = state.cash + revenue;
+            db.ref(`groups/${group}/state`).update({
+              cash: updatedCash,
+              labor: defaultState.labor
+            });
 
-        db.ref(`groups/${group}/state`).update({
-          cash: updatedCash,
-          labor: defaultState.labor
-        });
-
-        db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
-        db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
-      }
-    }
-    currentRound++;
-    document.getElementById("current-round-display").textContent = currentRound;
-    if (currentRound <= maxRounds) showEventModal(currentRound);
-    else alert("✅ Game complete! All 6 rounds finished.");
-    window.onload = function () {
-      Promise.all(groupList.map(groupId =>
-        db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-          if (!snapshot.exists()) {
-            return db.ref(`groups/${groupId}/state`).set(defaultState);
+            db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
+            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
           }
-        })
-      )).then(() => {
-        loadGroupState();
-        updateOverviewTable();
-        showEventModal(currentRound);
-      });
-    };
-  });
+        }
+        currentRound++;
         document.getElementById("current-round-display").textContent = currentRound;
         alert(`💰 Market resolved. Advanced to Round ${currentRound}. Revenue distributed and labour refreshed.`);
         loadGroupState();
@@ -330,22 +292,5 @@ showEventModal(currentRound);
     loadGroupState();
     updateOverviewTable();
   </script>
-<div id="eventModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; z-index:9999; padding:40px; text-align:center;">
-  <h2 id="eventText"></h2>
-  <button onclick="closeEventModal()" style="margin-top:20px; padding:10px 20px; font-size:16px;">Start Round</button>
-</div>
-
-<script>
-function showEventModal(round) {
-  const event = demandModifiers.find(e => e.round === round);
-  if (event) {
-    document.getElementById("eventText").innerText = event.message;
-    document.getElementById("eventModal").style.display = "block";
-  }
-}
-function closeEventModal() {
-  document.getElementById("eventModal").style.display = "none";
-}
-</script>
 </body>
 </html>
