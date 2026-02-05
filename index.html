@@ -96,7 +96,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const groupId = "groupA"; // Replace with dynamic ID per group
+    const groupId = document.getElementById("group-select").value;
     const currentRound = "round1";
 
     function simulateProduction() {
