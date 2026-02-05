@@ -206,7 +206,7 @@
           loadGroupState();
           updateOverviewTable();
         } else {
-          document.getElementById("materialOutput").textContent = `Not enough cash.`;
+          document.getElementById("materialOutput").textContent = `Not enough cash to buy materials.`;
         }
       });
     }
@@ -234,7 +234,7 @@
           document.getElementById('prodOutput').textContent = `You produced ${units} units.`;
           updateOverviewTable();
         } else {
-          document.getElementById('prodOutput').textContent = `Not enough resources to produce.`;
+          document.getElementById('prodOutput').textContent = `❌ Not enough labour or materials to produce that amount.`;
         }
       });
     }
