@@ -104,7 +104,15 @@
       const cost = units * 5;
       document.getElementById('prodOutput').textContent = `You produced ${units} units for £${cost}.`;
     }
-
+<label for="group-select">Select your group:</label>
+<select id="group-select">
+  <option value="groupA">Group A</option>
+  <option value="groupB">Group B</option>
+  <option value="groupC">Group C</option>
+  <option value="groupC">Group D</option>
+  <option value="groupC">Group E</option>
+  <option value="groupC">Group F</option>
+</select>
     function submitPrice() {
       const price = parseFloat(document.getElementById('price').value);
       const produced = parseInt(document.getElementById('units').value);
