@@ -99,6 +99,19 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #fff;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #888;
+      text-align: center;
+    }
+    th {
+      background-color: #555;
+    }
   </style>
 </head>
 <body>
@@ -127,6 +140,8 @@
         <option value="groupA">Group A</option>
         <option value="groupB">Group B</option>
         <option value="groupC">Group C</option>
+        <option value="groupD">Group D</option>
+        <option value="groupE">Group E</option>
       </select>
     </div>
   </div>
@@ -153,6 +168,16 @@
     <textarea readonly id="leaderboard"></textarea>
   </div>
 
+  <div class="section">
+    <h2>Team Resources Overview</h2>
+    <table id="resource-table">
+      <thead>
+        <tr><th>Team</th><th>Cash</th><th>Labour</th><th>Materials</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -171,7 +196,6 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     let currentRound = 1;
 
     function startGame() {
@@ -182,6 +206,7 @@
     function nextRound() {
       currentRound++;
       document.getElementById("round-display").textContent = currentRound;
+      loadResourceTable();
     }
 
     function simulateProduction() {
@@ -238,6 +263,18 @@
           document.getElementById("cash-display").textContent = `£${state.cash}`;
           document.getElementById("labour-display").textContent = state.labor;
           document.getElementById("materials-display").textContent = state.materials;
+        }
+      });
+    }
+
+    function loadResourceTable() {
+      db.ref("groups").once("value").then(snapshot => {
+        const data = snapshot.val();
+        const tbody = document.querySelector("#resource-table tbody");
+        tbody.innerHTML = "";
+        for (const group in data) {
+          const state = data[group].state || { cash: "-", labor: "-", materials: "-" };
+          tbody.innerHTML += `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
         }
       });
     }
