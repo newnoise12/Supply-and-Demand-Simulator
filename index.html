@@ -89,7 +89,43 @@
     <p id="materialOutput"></p>
   </div>
 
-  <!-- Event Modal -->
+  <div class="section">
+    <h2>Production</h2>
+    <label>Units to produce:</label>
+    <input type="number" id="units" value="1" min="1" />
+    <button onclick="simulateProduction()">Produce</button>
+    <p id="prodOutput"></p>
+  </div>
+
+  <div class="section">
+    <h2>Set Price</h2>
+    <label>Price per unit:</label>
+    <input type="number" id="price" value="10" min="1" />
+    <button onclick="submitPrice()">Submit Price</button>
+    <p id="priceOutput"></p>
+  </div>
+
+  <div class="section">
+    <h2>Instructor Controls</h2>
+    <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
+    <p>Current Round: <span id="current-round-display">1</span></p>
+  </div>
+
+  <div class="section">
+    <h2>Group Resources Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th>Cash (£)</th>
+          <th>Labour</th>
+          <th>Materials</th>
+        </tr>
+      </thead>
+      <tbody id="resource-table"></tbody>
+    </table>
+  </div>
+
   <div id="eventModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; z-index:9999; padding:40px; text-align:center;">
     <h2 id="eventText"></h2>
     <button onclick="closeEventModal()" style="margin-top:20px; padding:10px 20px; font-size:16px;">Start Round</button>
@@ -101,50 +137,46 @@
     const firebaseConfig = {
       apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
       authDomain: "supply-demand-sim.firebaseapp.com",
-      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com",
       projectId: "supply-demand-sim",
       storageBucket: "supply-demand-sim.appspot.com",
       messagingSenderId: "370392861384",
       appId: "1:370392861384:web:3e142dac960d98f7b073fd",
-      measurementId: "G-P602EV8WKN"
+      measurementId: "G-P602EV8WKN",
+      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let currentRound = 1;
     const groupList = ['groupA','groupB','groupC','groupD','groupE'];
     const defaultState = { cash: 100, labor: 10, materials: 0 };
-    let currentRound = 1;
 
     const demandModifiers = [
-      { round: 1, message: "📦 Year 1: The economy is stable. Demand is average.", materialPrice: 3 },
-      { round: 2, message: "🌊 Year 2: A flood disrupts trade routes. Material prices increase.", materialPrice: 5 },
-      { round: 3, message: "👶 Year 3: Population boom boosts demand. Material prices normalize.", materialPrice: 3 },
-      { round: 4, message: "📉 Year 4: Tariffs increase import costs. Materials cost more.", materialPrice: 4 },
-      { round: 5, message: "🚀 Year 5: Efficient transport lowers costs. Material price drops.", materialPrice: 2 },
-      { round: 6, message: "📉 Year 6: Market saturation. Material prices rebound.", materialPrice: 4 }
+      { round: 1, materialPrice: 3, message: "📦 Year 1: The economy is stable. Demand is average." },
+      { round: 2, materialPrice: 4, message: "🌊 Year 2: A flood disrupts trade routes. Material costs rise." },
+      { round: 3, materialPrice: 2, message: "👶 Year 3: Population boom boosts supply. Materials cheaper." },
+      { round: 4, materialPrice: 5, message: "📉 Year 4: Tariffs increase costs. Materials expensive." },
+      { round: 5, materialPrice: 3, message: "🚀 Year 5: Logistics improve. Material prices normalize." },
+      { round: 6, materialPrice: 4, message: "📉 Year 6: Resource scarcity increases material prices." }
     ];
-
-    function getCurrentMaterialPrice() {
-      const event = demandModifiers.find(e => e.round === currentRound);
-      return event ? event.materialPrice : 3;
-    }
-
-    function updateMaterialPriceDisplay() {
-      document.getElementById("material-price").textContent = `£${getCurrentMaterialPrice()}`;
-    }
 
     function showEventModal(round) {
       const event = demandModifiers.find(e => e.round === round);
       if (event) {
         document.getElementById("eventText").innerText = event.message;
+        document.getElementById("material-price").textContent = `£${event.materialPrice}`;
         document.getElementById("eventModal").style.display = "block";
-        updateMaterialPriceDisplay();
       }
     }
-
     function closeEventModal() {
       document.getElementById("eventModal").style.display = "none";
       loadGroupState();
+      updateOverviewTable();
+    }
+
+    function getCurrentMaterialPrice() {
+      const event = demandModifiers.find(e => e.round === currentRound);
+      return event ? event.materialPrice : 3;
     }
 
     function loadGroupState() {
@@ -176,7 +208,7 @@
       const cost = qty * unitPrice;
 
       db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-        const state = snapshot.val() || defaultState;
+        const state = snapshot.val();
         if (state.cash >= cost) {
           db.ref(`groups/${groupId}/state`).update({
             cash: state.cash - cost,
@@ -186,14 +218,77 @@
           loadGroupState();
           updateOverviewTable();
         } else {
-          document.getElementById("materialOutput").textContent = `❌ Not enough cash.`;
+          document.getElementById("materialOutput").textContent = `Not enough cash.`;
         }
       });
     }
 
-    window.onload = () => {
-      showEventModal(currentRound);
-    };
+    function simulateProduction() {
+      const units = parseInt(document.getElementById('units').value);
+      const groupId = document.getElementById('group-select').value;
+      const labourNeeded = units * 2;
+      const materialsNeeded = units * 1;
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state.labor >= labourNeeded && state.materials >= materialsNeeded) {
+          db.ref(`groups/${groupId}/state`).update({
+            labor: state.labor - labourNeeded,
+            materials: state.materials - materialsNeeded
+          });
+          document.getElementById('prodOutput').textContent = `You produced ${units} units.`;
+          loadGroupState();
+          updateOverviewTable();
+        } else {
+          document.getElementById('prodOutput').textContent = `❌ Not enough labour or materials.`;
+        }
+      });
+    }
+
+    function submitPrice() {
+      const price = parseFloat(document.getElementById('price').value);
+      const produced = parseInt(document.getElementById('units').value);
+      const groupId = document.getElementById('group-select').value;
+      const roundKey = `round${currentRound}`;
+
+      db.ref(`groups/${groupId}/${roundKey}`).set({
+        price,
+        produced,
+        timestamp: Date.now()
+      });
+
+      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+    }
+
+    function resolveMarket() {
+      db.ref("groups").once("value").then(snapshot => {
+        const groups = snapshot.val();
+        for (let group in groups) {
+          const rounds = groups[group];
+          const state = rounds.state || { cash: 0 };
+          const lastRoundKey = `round${currentRound}`;
+          const roundData = rounds[lastRoundKey];
+          if (roundData && roundData.price && roundData.produced) {
+            const unitsSold = Math.max(0, 100 - roundData.price * 2);
+            const sold = Math.min(unitsSold, roundData.produced);
+            const revenue = roundData.price * sold;
+            db.ref(`groups/${group}/state`).update({
+              cash: state.cash + revenue,
+              labor: defaultState.labor
+            });
+            db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
+            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
+          }
+        }
+        currentRound++;
+        document.getElementById("current-round-display").textContent = currentRound;
+        showEventModal(currentRound);
+        loadGroupState();
+        updateOverviewTable();
+      });
+    }
+
+    showEventModal(currentRound);
   </script>
 </body>
 </html>
