@@ -335,7 +335,6 @@
 
   db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
   db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
-
   // 🎯 Per-group feedback
   let feedback = "";
   if (sold === 0) {
