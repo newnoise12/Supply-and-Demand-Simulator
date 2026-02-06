@@ -187,7 +187,7 @@ const defaultState = { cash: 100, labor: getInitialLabor(currentRound), material
       document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
       let introMessage = '';
       if (round === 1) {
-        introMessage = `\n\n🧠 Game Instructions:\n- Each group starts with £100 cash, 10 labour units, and 0 materials.\n- Buy materials (£${currentMaterialPrice} per unit) to enable production.\n- Each unit produced requires 2 labour and 1 material.\n- Set your price per unit after production.\n- After each round, sales are resolved based on total market supply and demand.\n- Labour refreshes each round. Materials must be bought.\n- Max acceptable price: £${MAX_ACCEPTABLE_PRICE} — setting a higher price will result in zero sales.`;
+        introMessage = `\n\n🧠 Game Instructions:\n- Each group starts with £100 cash, 25 labour units, and 0 materials.\n- Buy materials (£${currentMaterialPrice} per unit) to enable production.\n- Each unit produced requires 2 labour and 1 material.\n- Set your price per unit after production.\n- After each round, sales are resolved based on total market supply and demand.\n- Labour refreshes each round. Materials must be bought.\n- Max acceptable price: £${MAX_ACCEPTABLE_PRICE} — setting a higher price will result in zero sales./\n- How well will you do in this exciting mill management simulator?!`;
       }
       document.getElementById("eventText").innerText = event.message + introMessage;
       document.getElementById("eventModal").style.display = "block";
