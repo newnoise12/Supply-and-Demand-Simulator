@@ -108,6 +108,7 @@
 <div class="section">
   <h2>📣 Market Feedback</h2>
   <p id="group-feedback">Your feedback will appear here after each round.</p>
+  <p id="group-feedback" style="margin-top: 10px; font-style: italic; color: #ffcc00;"></p>
 </div>
 
   <div class="section">
@@ -283,72 +284,69 @@
     document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
   }
 
-  function resolveMarket() {
-    const event = demandModifiers.find(e => e.round === currentRound);
-    const baseDemand = event ? event.baseDemand : 100;
-    const saturationPoint = 150;
+ function resolveMarket() {
+  const event = demandModifiers.find(e => e.round === currentRound);
+  const baseDemand = event ? event.baseDemand : 100;
+  const saturationPoint = 150;
 
-    db.ref("groups").once("value").then(snapshot => {
-      const groups = snapshot.val();
-      let totalProduced = 0;
-      const groupRoundData = {};
+  db.ref("groups").once("value").then(snapshot => {
+    const groups = snapshot.val();
+    let totalProduced = 0;
+    const groupRoundData = {};
 
-      for (let group in groups) {
-        const roundKey = `round${currentRound}`;
-        const roundData = groups[group][roundKey];
-        if (roundData && roundData.produced) {
-          totalProduced += roundData.produced;
-          groupRoundData[group] = roundData;
-        }
+    // Step 1: Calculate total produced
+    for (let group in groups) {
+      const roundKey = `round${currentRound}`;
+      const roundData = groups[group][roundKey];
+      if (roundData && roundData.produced) {
+        totalProduced += roundData.produced;
+        groupRoundData[group] = roundData;
+      }
+    }
+
+    // Step 2: Calculate adjusted demand
+    const demandFactor = Math.max(0.1, 1 - (totalProduced / saturationPoint));
+    const adjustedDemand = Math.floor(baseDemand * demandFactor);
+
+    // Step 3: Allocate market share & apply feedback
+    for (let group in groupRoundData) {
+      const groupData = groupRoundData[group];
+      const state = groups[group].state || defaultState;
+
+      const share = groupData.produced / totalProduced;
+      const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
+      const revenue = unitsSold * groupData.price;
+
+      db.ref(`groups/${group}/state`).update({
+        cash: state.cash + revenue,
+        labor: defaultState.labor
+      });
+
+      db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
+      db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+
+      // ✅ Per-group feedback
+      let feedback = "";
+      if (unitsSold === 0) {
+        feedback = "❌ None of your goods sold. Possibly overpriced or too much market competition.";
+      } else if (unitsSold < groupData.produced) {
+        feedback = `⚠️ Partial sales: You sold ${unitsSold} of ${groupData.produced} units.`;
+      } else {
+        feedback = "✅ You sold all your units! Great pricing or low competition.";
       }
 
-      const demandFactor = Math.max(0.1, 1 - (totalProduced / saturationPoint));
-      const adjustedDemand = Math.floor(baseDemand * demandFactor);
+      if (group === document.getElementById('group-select').value) {
+        document.getElementById("group-feedback").textContent = feedback;
+      }
+    }
 
-      for (let group in groupRoundData) {
-        const groupData = groupRoundData[group];
-        const state = groups[group].state || defaultState;
-
-        const share = groupData.produced / totalProduced;
-        const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
-        const revenue = unitsSold * groupData.price;
-
-        db.ref(`groups/${group}/state`).update({
-          cash: state.cash + revenue,
-          labor: defaultState.labor
-        });
-
-        db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
-        db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
-        for (let group in groupRoundData) {
-  const groupData = groupRoundData[group];
-  const state = groups[group].state || defaultState;
-
-  const share = groupData.produced / totalProduced;
-  const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
-  const revenue = unitsSold * groupData.price;
-
-  db.ref(`groups/${group}/state`).update({
-    cash: state.cash + revenue,
-    labor: defaultState.labor
+    // ✅ Advance round and update view
+    currentRound++;
+    document.getElementById("current-round-display").textContent = currentRound;
+    showEventModal(currentRound);
+    loadGroupState();
+    updateOverviewTable();
   });
-
-  db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
-  db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
-  // 🎯 Per-group feedback
-  let feedback = "";
-  if (sold === 0) {
-    feedback = "❌ None of your goods sold. Possibly overpriced or too much market competition.";
-  } else if (sold < groupData.produced) {
-    feedback = `⚠️ Partial sales: You sold ${unitsSold} out of ${groupData.produced} units.`;
-  } else {
-    feedback = "✅ You sold all your units! Great pricing or low competition.";
-  }
-
-  // Only show message for the currently selected group
-  if (group === document.getElementById('group-select').value) {
-    document.getElementById("group-feedback").textContent = feedback;
-  }
 }
 
       }
