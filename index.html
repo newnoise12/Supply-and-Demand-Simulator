@@ -105,6 +105,11 @@
     <p id="priceOutput"></p>
   </div>
 
+<div class="section">
+  <h2>📣 Market Feedback</h2>
+  <p id="group-feedback">Your feedback will appear here after each round.</p>
+</div>
+
   <div class="section">
     <h2>Instructor Controls</h2>
     <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
@@ -315,6 +320,38 @@
 
         db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
         db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+        for (let group in groupRoundData) {
+  const groupData = groupRoundData[group];
+  const state = groups[group].state || defaultState;
+
+  const share = groupData.produced / totalProduced;
+  const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
+  const revenue = unitsSold * groupData.price;
+
+  db.ref(`groups/${group}/state`).update({
+    cash: state.cash + revenue,
+    labor: defaultState.labor
+  });
+
+  db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
+  db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+
+  // 🎯 Per-group feedback
+  let feedback = "";
+  if (sold === 0) {
+    feedback = "❌ None of your goods sold. Possibly overpriced or too much market competition.";
+  } else if (sold < groupData.produced) {
+    feedback = `⚠️ Partial sales: You sold ${unitsSold} out of ${groupData.produced} units.`;
+  } else {
+    feedback = "✅ You sold all your units! Great pricing or low competition.";
+  }
+
+  // Only show message for the currently selected group
+  if (group === document.getElementById('group-select').value) {
+    document.getElementById("group-feedback").textContent = feedback;
+  }
+}
+
       }
 
       currentRound++;
