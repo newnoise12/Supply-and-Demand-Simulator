@@ -172,13 +172,24 @@
   }
 
   function showEventModal(round) {
-    const event = demandModifiers.find(e => e.round === round);
-    if (event) {
-      currentMaterialPrice = event.materialPrice;
-      document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
-      document.getElementById("eventText").innerText = event.message;
-      document.getElementById("eventModal").style.display = "block";
+  const event = demandModifiers.find(e => e.round === round);
+  if (event) {
+    let message = event.message;
+    if (round === 1) {
+      message += `
+
+🧠 Game Instructions:
+- Each group starts with £100 cash, 10 labour units, and 0 materials.
+- Buy materials (£${currentMaterialPrice} per unit) to enable production.
+- Each unit produced requires 2 labour and 1 material.
+- Set your price per unit after production.
+- After each round, sales are resolved based on total market supply and demand.
+- Labour refreshes each round. Materials must be bought.
+- Demand varies each round and affects how many units can be sold.`;
     }
+    document.getElementById("eventText").innerText = message;
+    document.getElementById("eventModal").style.display = "block";
+  }
   }
 
   function closeEventModal() {
