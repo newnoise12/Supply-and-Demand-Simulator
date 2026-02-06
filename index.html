@@ -155,7 +155,9 @@
     }
 
     function closeEventModal() {
-      document.getElementById("eventModal").style.display = "none";
+  document.getElementById("eventModal").style.display = "none";
+  loadGroupState();         // reload state for selected group
+  updateOverviewTable();    // update the table;
     }
 
     window.onload = showEventModal;
