@@ -315,7 +315,7 @@
 
         db.ref(`groups/${group}/state`).update({
           cash: state.cash + revenue,
-          labor: defaultState.labor
+          labor: 25 + (currentRound - 1) * 5
         });
 
         db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
