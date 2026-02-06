@@ -104,6 +104,11 @@
     <button onclick="submitPrice()">Submit Price</button>
     <p id="priceOutput"></p>
   </div>
+  
+<div class="section">
+  <h2>📣 Market Feedback</h2>
+  <p id="group-feedback">Your feedback will appear here after each round.</p>
+</div>
 
   <div class="section">
     <h2>Instructor Controls</h2>
@@ -315,6 +320,22 @@
 
         db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
         db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+        db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
+        db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+        let feedback = "";
+
+if (unitsSold === 0) {
+  feedback = "❌ None of your goods sold. Likely oversupply or pricing too high.";
+} else if (unitsSold < groupData.produced) {
+  feedback = `⚠️ Partial sales: You sold ${unitsSold} of ${groupData.produced} units.`;
+} else {
+  feedback = "✅ You sold all your units. Strong pricing or favourable market.";
+}
+
+// Only update feedback for the currently selected group
+if (group === document.getElementById('group-select').value) {
+  document.getElementById("group-feedback").textContent = feedback;
+}
       }
 
       currentRound++;
