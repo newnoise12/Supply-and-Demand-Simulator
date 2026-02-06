@@ -152,29 +152,23 @@
   let currentMaterialPrice = 3;
 
   const demandModifiers = [
-    { round: 1, message: "📦 Year 1: The economy is stable. Demand is average.", materialPrice: 3 },
-    { round: 2, message: "🌊 Year 2: A flood disrupts trade routes. Material prices rise.", materialPrice: 5 },
-    { round: 3, message: "👶 Year 3: Population boom boosts demand.", materialPrice: 4 },
-    { round: 4, message: "📉 Year 4: Tariffs increase costs.", materialPrice: 6 },
-    { round: 5, message: "🚀 Year 5: A marketing breakthrough improves supply chains.", materialPrice: 2 },
-    { round: 6, message: "📉 Year 6: Market saturation. Prices normalize.", materialPrice: 3 }
+    { round: 1, baseDemand: 100, materialPrice: 3, message: "📦 Year 1: The economy is stable." },
+    { round: 2, baseDemand: 80, materialPrice: 4, message: "🌊 Year 2: Flood lowers demand and raises material costs." },
+    { round: 3, baseDemand: 130, materialPrice: 3, message: "👶 Year 3: Baby boom increases demand." },
+    { round: 4, baseDemand: 90, materialPrice: 5, message: "📉 Year 4: Tariffs increase production costs." },
+    { round: 5, baseDemand: 120, materialPrice: 2, message: "🚀 Year 5: A new source reduces material cost." },
+    { round: 6, baseDemand: 70, materialPrice: 3, message: "📉 Year 6: Market saturation hits." }
   ];
 
   function ensureAllGroupsInitialized() {
-    return Promise.all(groupList.map(groupId => {
-      return db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+    const initPromises = groupList.map(groupId =>
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
         if (!snapshot.exists()) {
           return db.ref(`groups/${groupId}/state`).set(defaultState);
         }
-      });
-    }));
-  }
-
-  function afterIntroLoad() {
-    ensureAllGroupsInitialized().then(() => {
-      loadGroupState();
-      updateOverviewTable();
-    });
+      })
+    );
+    return Promise.all(initPromises);
   }
 
   function showEventModal(round) {
@@ -184,14 +178,13 @@
       document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
       document.getElementById("eventText").innerText = event.message;
       document.getElementById("eventModal").style.display = "block";
-    } else {
-      afterIntroLoad();
     }
   }
 
   function closeEventModal() {
     document.getElementById("eventModal").style.display = "none";
-    afterIntroLoad();
+    loadGroupState();
+    updateOverviewTable();
   }
 
   function loadGroupState() {
@@ -274,55 +267,45 @@
     document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
   }
 
- function resolveMarket() {
-  const event = demandModifiers.find(e => e.round === currentRound);
-  const baseDemand = 100;
-  const saturationPoint = 150;
+  function resolveMarket() {
+    const event = demandModifiers.find(e => e.round === currentRound);
+    const baseDemand = event ? event.baseDemand : 100;
+    const saturationPoint = 150;
 
-  db.ref("groups").once("value").then(snapshot => {
-    const groups = snapshot.val();
-    let totalProduced = 0;
-    const groupRoundData = {};
+    db.ref("groups").once("value").then(snapshot => {
+      const groups = snapshot.val();
+      let totalProduced = 0;
+      const groupRoundData = {};
 
-    // Step 1: Calculate total produced
-    for (let group in groups) {
-      const roundKey = `round${currentRound}`;
-      const roundData = groups[group][roundKey];
-      if (roundData && roundData.produced) {
-        totalProduced += roundData.produced;
-        groupRoundData[group] = roundData;
+      for (let group in groups) {
+        const roundKey = `round${currentRound}`;
+        const roundData = groups[group][roundKey];
+        if (roundData && roundData.produced) {
+          totalProduced += roundData.produced;
+          groupRoundData[group] = roundData;
+        }
       }
-    }
 
-    // Step 2: Calculate adjusted demand
-    const demandFactor = Math.max(0.1, 1 - (totalProduced / saturationPoint));
-    const adjustedDemand = Math.floor(baseDemand * demandFactor);
+      const demandFactor = Math.max(0.1, 1 - (totalProduced / saturationPoint));
+      const adjustedDemand = Math.floor(baseDemand * demandFactor);
 
-    // Step 3: Allocate market share
-    for (let group in groupRoundData) {
-      const groupData = groupRoundData[group];
-      const state = groups[group].state || defaultState;
+      for (let group in groupRoundData) {
+        const groupData = groupRoundData[group];
+        const state = groups[group].state || defaultState;
 
-      const share = groupData.produced / totalProduced;
-      const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
-      const revenue = unitsSold * groupData.price;
+        const share = groupData.produced / totalProduced;
+        const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
+        const revenue = unitsSold * groupData.price;
 
-      db.ref(`groups/${group}/state`).update({
-        cash: state.cash + revenue,
-        labor: defaultState.labor
-      });
+        db.ref(`groups/${group}/state`).update({
+          cash: state.cash + revenue,
+          labor: defaultState.labor
+        });
 
-      db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
-      db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
-    }
+        db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
+        db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+      }
 
-    currentRound++;
-    document.getElementById("current-round-display").textContent = currentRound;
-    showEventModal(currentRound);
-    loadGroupState();
-    updateOverviewTable();
-  });
-}
       currentRound++;
       document.getElementById("current-round-display").textContent = currentRound;
       showEventModal(currentRound);
@@ -331,7 +314,11 @@
     });
   }
 
-  window.onload = () => showEventModal(currentRound);
+  window.onload = () => {
+    ensureAllGroupsInitialized().then(() => {
+      showEventModal(currentRound);
+    });
+  };
 </script>
-</body>
+
 </html>
