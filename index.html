@@ -29,20 +29,31 @@
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #45a049;
     }
     select, input {
       padding: 8px;
       border-radius: 5px;
+      border: 1px solid #999;
       background-color: #222;
       color: white;
       margin-top: 5px;
       margin-bottom: 10px;
     }
-    h1 { text-align: center; color: #77dd77; }
-    h2 { color: #add8e6; }
+    h1 {
+      text-align: center;
+      color: #77dd77;
+    }
+    h2 {
+      color: #add8e6;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 20px;
       background-color: #1f1f1f;
     }
     th, td {
@@ -50,211 +61,304 @@
       padding: 8px;
       text-align: center;
     }
-    th { background-color: #333; }
+    th {
+      background-color: #333;
+    }
   </style>
 </head>
-
 <body>
-<h1>🏭 Mill King!</h1>
+  <h1>📊 Milling Simulator!</h1>
 
-<div class="section">
-  <label>Select Group:</label>
-  <select id="group-select" onchange="loadGroupState()">
-    <option value="groupA">Group A</option>
-    <option value="groupB">Group B</option>
-    <option value="groupC">Group C</option>
-    <option value="groupD">Group D</option>
-    <option value="groupE">Group E</option>
-  </select>
-  <p>
-    Cash: <span id="cash-display">£0</span> |
-    Labour: <span id="labour-display">0</span> |
-    Materials: <span id="materials-display">0</span>
-  </p>
-</div>
+  <div class="section">
+    <label>Select Group:</label>
+    <select id="group-select" onchange="loadGroupState()">
+      <option value="groupA">Group A</option>
+      <option value="groupB">Group B</option>
+      <option value="groupC">Group C</option>
+      <option value="groupD">Group D</option>
+      <option value="groupE">Group E</option>
+    </select>
+    <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
+  </div>
 
-<div class="section">
-  <h2>Buy Materials</h2>
-  <label>Price: <span id="material-price">£3</span>/unit</label><br>
-  <input type="number" id="materials-to-buy" value="1" min="1">
-  <button onclick="buyMaterials()">Buy</button>
-  <p id="materialOutput"></p>
-</div>
+  <div class="section">
+    <h2>Buy Materials</h2>
+    <label>Units of materials to buy (<span id="material-price">£3</span>/unit):</label>
+    <input type="number" id="materials-to-buy" value="1" min="1" />
+    <button onclick="buyMaterials()">Buy Materials</button>
+    <p id="materialOutput"></p>
+  </div>
 
-<div class="section">
-  <h2>Production</h2>
-  <input type="number" id="units" value="1" min="1">
-  <button onclick="simulateProduction()">Produce</button>
-  <p id="prodOutput"></p>
-</div>
+  <div class="section">
+    <h2>Production</h2>
+    <label>Units to produce:</label>
+    <input type="number" id="units" value="1" min="1" />
+    <button onclick="simulateProduction()">Produce</button>
+    <p id="prodOutput"></p>
+  </div>
 
-<div class="section">
-  <h2>Set Price</h2>
-  <input type="number" id="price" value="10" min="1">
-  <button onclick="submitPrice()">Submit</button>
-  <p id="priceOutput"></p>
-</div>
-
+  <div class="section">
+    <h2>Set Price</h2>
+    <label>Price per unit:</label>
+    <input type="number" id="price" value="10" min="1" />
+    <button onclick="submitPrice()">Submit Price</button>
+    <p id="priceOutput"></p>
+  </div>
+  
 <div class="section">
   <h2>📣 Market Feedback</h2>
-  <p id="group-feedback">Awaiting market resolution…</p>
+  <p id="group-feedback">Your feedback will appear here after each round.</p>
 </div>
 
-<div class="section">
-  <button onclick="resolveMarket()">Resolve Market</button>
-  <p>Round: <span id="current-round-display">1</span></p>
-</div>
+  <div class="section">
+    <h2>Instructor Controls</h2>
+    <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
+    <p>Current Round: <span id="current-round-display">1</span></p>
+  </div>
 
-<div class="section">
-  <h2>Group Overview</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Group</th><th>Cash</th><th>Labour</th><th>Materials</th>
-      </tr>
-    </thead>
-    <tbody id="resource-table"></tbody>
-  </table>
-</div>
+  <div class="section">
+    <h2>Group Resources Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th>Cash (£)</th>
+          <th>Labour</th>
+          <th>Materials</th>
+        </tr>
+      </thead>
+      <tbody id="resource-table"></tbody>
+    </table>
+  </div>
 
-<div id="eventModal" style="display:none; position:fixed; inset:0; background:black; color:white; padding:40px;">
-  <h2 id="eventText"></h2>
-  <button onclick="closeEventModal()">Start Round</button>
-</div>
+  <div id="eventModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; z-index:9999; padding:40px; text-align:center;">
+    <h2 id="eventText"></h2>
+    <button onclick="closeEventModal()" style="margin-top:20px; padding:10px 20px; font-size:16px;">Start Round</button>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
-  authDomain: "supply-demand-sim.firebaseapp.com",
-  databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com",
-  projectId: "supply-demand-sim"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
+    authDomain: "supply-demand-sim.firebaseapp.com",
+    databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com",
+    projectId: "supply-demand-sim",
+    storageBucket: "supply-demand-sim.appspot.com",
+    messagingSenderId: "370392861384",
+    appId: "1:370392861384:web:3e142dac960d98f7b073fd"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-let currentRound = 1;
-const MAX_ACCEPTABLE_PRICE = 20;
-const groupList = ['groupA','groupB','groupC','groupD','groupE'];
-
-function getInitialLabor(round){ return 25 + (round-1)*5; }
-
-const defaultState = { cash:100, labor:getInitialLabor(1), materials:0 };
-let currentMaterialPrice = 3;
-
-const demandModifiers = [
-  {round:1, baseDemand:100, materialPrice:3, message:"Stable economy"},
-  {round:2, baseDemand:80, materialPrice:4, message:"Flood raises costs"},
-  {round:3, baseDemand:130, materialPrice:3, message:"Population boom"},
-  {round:4, baseDemand:90, materialPrice:5, message:"Tariffs imposed"},
-  {round:5, baseDemand:120, materialPrice:2, message:"Cheaper inputs"},
-  {round:6, baseDemand:70, materialPrice:3, message:"Market saturation"}
-];
-
-function ensureAllGroupsInitialized(){
-  return Promise.all(groupList.map(g =>
-    db.ref(`groups/${g}/state`).once("value").then(s=>{
-      if(!s.exists()) db.ref(`groups/${g}/state`).set(defaultState);
-    })
-  ));
+  let currentRound = 1;
+  const MAX_ACCEPTABLE_PRICE = 20;
+  const groupList = ['groupA', 'groupB', 'groupC', 'groupD', 'groupE'];
+  function getInitialLabor(round) {
+  return 25 + (round - 1) * 5;
 }
+const defaultState = { cash: 100, labor: getInitialLabor(currentRound), materials: 0 };
+  let currentMaterialPrice = 3;
 
-function loadGroupState(){
-  const g = groupSelect.value;
-  db.ref(`groups/${g}/state`).once("value").then(s=>{
-    const st=s.val()||defaultState;
-    cashDisplay.textContent=`£${st.cash}`;
-    labourDisplay.textContent=st.labor;
-    materialsDisplay.textContent=st.materials;
-  });
+  const demandModifiers = [
+    { round: 1, baseDemand: 100, materialPrice: 3, message: "📦 Year 1: The economy is stable." },
+    { round: 2, baseDemand: 80, materialPrice: 4, message: "🌊 Year 2: Flood lowers demand and raises material costs." },
+    { round: 3, baseDemand: 130, materialPrice: 3, message: "👶 Year 3: Baby boom increases demand." },
+    { round: 4, baseDemand: 90, materialPrice: 5, message: "📉 Year 4: Tariffs increase production costs." },
+    { round: 5, baseDemand: 120, materialPrice: 2, message: "🚀 Year 5: A new source reduces material cost." },
+    { round: 6, baseDemand: 70, materialPrice: 3, message: "📉 Year 6: Market saturation hits." }
+  ];
 
-  db.ref(`groups/${g}/round${currentRound}/feedback`).once("value").then(s=>{
-    groupFeedback.textContent = s.val() || "Awaiting market resolution…";
-  });
-}
+  function ensureAllGroupsInitialized() {
+    const initPromises = groupList.map(groupId =>
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          return db.ref(`groups/${groupId}/state`).set(defaultState);
+        }
+      })
+    );
+    return Promise.all(initPromises);
+  }
 
-function updateOverviewTable(){
-  resourceTable.innerHTML="";
-  groupList.forEach(g=>{
-    db.ref(`groups/${g}/state`).once("value").then(s=>{
-      const st=s.val()||defaultState;
-      resourceTable.innerHTML+=`<tr><td>${g}</td><td>£${st.cash}</td><td>${st.labor}</td><td>${st.materials}</td></tr>`;
-    });
-  });
-}
-
-function buyMaterials(){
-  const g=groupSelect.value;
-  const q=+materialsToBuy.value;
-  const cost=q*currentMaterialPrice;
-  db.ref(`groups/${g}/state`).once("value").then(s=>{
-    const st=s.val();
-    if(st.cash>=cost){
-      db.ref(`groups/${g}/state`).update({cash:st.cash-cost, materials:st.materials+q});
-      materialOutput.textContent=`Bought ${q} units`;
-      loadGroupState(); updateOverviewTable();
-    }
-  });
-}
-
-function simulateProduction(){
-  const g=groupSelect.value;
-  const u=+units.value;
-  db.ref(`groups/${g}/state`).once("value").then(s=>{
-    const st=s.val();
-    if(st.labor>=u*2 && st.materials>=u){
-      db.ref(`groups/${g}/state`).update({labor:st.labor-u*2, materials:st.materials-u});
-      prodOutput.textContent=`Produced ${u}`;
-      loadGroupState(); updateOverviewTable();
-    }
-  });
-}
-
-function submitPrice(){
-  const g=groupSelect.value;
-  const p=+price.value;
-  const u=+units.value;
-  db.ref(`groups/${g}/round${currentRound}`).set({price:p, produced:u});
-}
-
-function resolveMarket(){
-  const event=demandModifiers.find(e=>e.round===currentRound);
-  const baseDemand=event.baseDemand;
-  db.ref("groups").once("value").then(s=>{
-    const groups=s.val();
-    let total=0;
-    for(let g in groups){
-      const r=groups[g][`round${currentRound}`];
-      if(r) total+=r.produced||0;
-    }
-    const demand=Math.floor(baseDemand*(1-total/150));
-    for(let g in groups){
-      const r=groups[g][`round${currentRound}`];
-      if(!r) continue;
-      let feedback="";
-      let sold=0, revenue=0;
-      if(r.price>MAX_ACCEPTABLE_PRICE){
-        feedback="❌ Price too high – no sales.";
-      } else {
-        sold=Math.min(r.produced, Math.floor((r.produced/total)*demand));
-        revenue=sold*r.price;
-        feedback=sold===0?"❌ No sales":sold<r.produced?"⚠️ Partial sales":"✅ Sold all units";
+  function showEventModal(round) {
+    const event = demandModifiers.find(e => e.round === round);
+    if (event) {
+      currentMaterialPrice = event.materialPrice;
+      document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
+      let introMessage = '';
+      if (round === 1) {
+        introMessage = `\n\n🧠 Game Instructions:\n- Each group starts with £100 cash, 25 labour units, and 0 materials.\n- Buy materials (£${currentMaterialPrice} per unit) to enable production.\n- Each unit produced requires 2 labour and 1 material.\n- Set your price per unit after production.\n- After each round, sales are resolved based on total market supply and demand.\n- Labour refreshes each round. Materials must be bought.\n- Max acceptable price: £${MAX_ACCEPTABLE_PRICE} — setting a higher price will result in zero sales./\n- How well will you do in this exciting mill management simulator?!`;
       }
-      db.ref(`groups/${g}/state`).update({
-        cash:groups[g].state.cash+revenue,
-        labor:getInitialLabor(currentRound+1)
-      });
-      db.ref(`groups/${g}/round${currentRound}`).update({sold,revenue,feedback});
+      document.getElementById("eventText").innerText = event.message + introMessage;
+      document.getElementById("eventModal").style.display = "block";
     }
-    currentRound++;
-    currentRoundDisplay.textContent=currentRound;
-    loadGroupState(); updateOverviewTable();
-  });
-}
+  }
 
-window.onload=()=>ensureAllGroupsInitialized().then(()=>loadGroupState());
+  function closeEventModal() {
+    document.getElementById("eventModal").style.display = "none";
+    loadGroupState();
+    updateOverviewTable();
+  }
+
+  function loadGroupState() {
+    const groupId = document.getElementById('group-select').value;
+    db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+      const state = snapshot.val() || defaultState;
+      document.getElementById("cash-display").textContent = `£${state.cash}`;
+      document.getElementById("labour-display").textContent = state.labor;
+      document.getElementById("materials-display").textContent = state.materials;
+    });
+  }
+
+  function updateOverviewTable() {
+    const table = document.getElementById("resource-table");
+    table.innerHTML = "";
+    groupList.forEach(group => {
+      db.ref(`groups/${group}/state`).once("value").then(snapshot => {
+        const state = snapshot.val() || defaultState;
+        const row = `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
+        table.innerHTML += row;
+      });
+    });
+  }
+
+  function buyMaterials() {
+    const groupId = document.getElementById('group-select').value;
+    const qty = parseInt(document.getElementById('materials-to-buy').value);
+    const cost = qty * currentMaterialPrice;
+
+    db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+      const state = snapshot.val();
+      if (state.cash >= cost) {
+        db.ref(`groups/${groupId}/state`).update({
+          cash: state.cash - cost,
+          materials: state.materials + qty
+        });
+        document.getElementById("materialOutput").textContent = `Bought ${qty} units for £${cost}`;
+        loadGroupState();
+        updateOverviewTable();
+      } else {
+        document.getElementById("materialOutput").textContent = `Not enough cash.`;
+      }
+    });
+  }
+
+  function simulateProduction() {
+    const groupId = document.getElementById('group-select').value;
+    const units = parseInt(document.getElementById('units').value);
+    const labourNeeded = units * 2;
+    const materialsNeeded = units;
+
+    db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+      const state = snapshot.val();
+      if (state.labor >= labourNeeded && state.materials >= materialsNeeded) {
+        db.ref(`groups/${groupId}/state`).update({
+          labor: state.labor - labourNeeded,
+          materials: state.materials - materialsNeeded
+        });
+        document.getElementById('prodOutput').textContent = `Produced ${units} units.`;
+        loadGroupState();
+        updateOverviewTable();
+      } else {
+        document.getElementById('prodOutput').textContent = `❌ Not enough labour or materials.`;
+      }
+    });
+  }
+
+  function submitPrice() {
+    const price = parseFloat(document.getElementById('price').value);
+    const produced = parseInt(document.getElementById('units').value);
+    const groupId = document.getElementById('group-select').value;
+    const roundKey = `round${currentRound}`;
+
+    if (price > MAX_ACCEPTABLE_PRICE) {
+      document.getElementById("priceOutput").textContent = `⚠️ Warning: £${price} exceeds market limit of £${MAX_ACCEPTABLE_PRICE}. No one may buy at this price.`;
+    } else {
+      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+    }
+
+    db.ref(`groups/${groupId}/${roundKey}`).set({
+      price,
+      produced,
+      timestamp: Date.now()
+    });
+  }
+
+  function resolveMarket() {
+    const event = demandModifiers.find(e => e.round === currentRound);
+    const baseDemand = event ? event.baseDemand : 100;
+    const saturationPoint = 150;
+
+    db.ref("groups").once("value").then(snapshot => {
+      const groups = snapshot.val();
+      let totalProduced = 0;
+      const groupRoundData = {};
+
+      for (let group in groups) {
+        const roundKey = `round${currentRound}`;
+        const roundData = groups[group][roundKey];
+        if (roundData && roundData.produced) {
+          totalProduced += roundData.produced;
+          groupRoundData[group] = roundData;
+        }
+      }
+
+      const demandFactor = Math.max(0.1, 1 - (totalProduced / saturationPoint));
+      const adjustedDemand = Math.floor(baseDemand * demandFactor);
+
+      for (let group in groupRoundData) {
+        const groupData = groupRoundData[group];
+        const state = groups[group].state || defaultState;
+
+        if (groupData.price > MAX_ACCEPTABLE_PRICE) {
+          db.ref(`groups/${group}/round${currentRound}/sold`).set(0);
+          db.ref(`groups/${group}/round${currentRound}/revenue`).set(0);
+
+          if (group === document.getElementById('group-select').value) {
+            document.getElementById("group-feedback").textContent = `❌ £${groupData.price} is too expensive. The market refused to buy your goods.`;
+          }
+          continue;
+        }
+
+        const share = groupData.produced / totalProduced;
+        const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
+        const revenue = unitsSold * groupData.price;
+
+        db.ref(`groups/${group}/state`).update({
+          cash: state.cash + revenue,
+          labor: getInitialLabor(currentRound + 1)
+        });
+
+        db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
+        db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+
+        let feedback = "";
+        if (unitsSold === 0) {
+          feedback = "❌ None of your goods sold. Likely oversupply or pricing too high.";
+        } else if (unitsSold < groupData.produced) {
+          feedback = `⚠️ Partial sales: You sold ${unitsSold} of ${groupData.produced} units.`;
+        } else {
+          feedback = "✅ You sold all your units. Strong pricing or favourable market.";
+        }
+
+        if (group === document.getElementById('group-select').value) {
+          document.getElementById("group-feedback").textContent = feedback;
+        }
+      }
+
+      currentRound++;
+      document.getElementById("current-round-display").textContent = currentRound;
+      showEventModal(currentRound);
+      loadGroupState();
+      updateOverviewTable();
+    });
+  }
+
+  window.onload = () => {
+    ensureAllGroupsInitialized().then(() => {
+      showEventModal(currentRound);
+    });
+  };
 </script>
-</body>
+
 </html>
