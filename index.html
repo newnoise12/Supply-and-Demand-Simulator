@@ -154,7 +154,10 @@
   let currentRound = 1;
   const MAX_ACCEPTABLE_PRICE = 20;
   const groupList = ['groupA', 'groupB', 'groupC', 'groupD', 'groupE'];
-  const defaultState = { cash: 100, labor: 25, materials: 0 };
+  function getInitialLabor(round) {
+  return 25 + (round - 1) * 5;
+}
+const defaultState = { cash: 100, labor: getInitialLabor(currentRound), materials: 0 };
   let currentMaterialPrice = 3;
 
   const demandModifiers = [
@@ -323,7 +326,7 @@
 
         db.ref(`groups/${group}/state`).update({
           cash: state.cash + revenue,
-          labor: 25 + (currentRound - 1) * 5
+          labor: getInitialLabor(currentRound + 1)
         });
 
         db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
