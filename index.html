@@ -176,12 +176,16 @@
     return Promise.all(initPromises);
   }
 
-  function showEventModal(round) {
+function showEventModal(round) {
   const event = demandModifiers.find(e => e.round === round);
   if (event) {
-    let message = event.message;
-    if (round === 1) {
-      message += `
+    currentMaterialPrice = event.materialPrice; // Set the new price
+    document.getElementById("material-price").textContent = `£${currentMaterialPrice}`; // Show it
+    document.getElementById("eventText").innerText = event.message;
+    document.getElementById("eventModal").style.display = "block";
+  }
+}
+
 
 🧠 Game Instructions:
 - Each group starts with £100 cash, 10 labour units, and 0 materials.
@@ -226,24 +230,26 @@
   }
 
   function buyMaterials() {
-    const groupId = document.getElementById('group-select').value;
-    const qty = parseInt(document.getElementById('materials-to-buy').value);
-    const cost = qty * currentMaterialPrice;
+  const groupId = document.getElementById('group-select').value;
+  const qty = parseInt(document.getElementById('materials-to-buy').value);
+  const cost = qty * currentMaterialPrice;
 
-    db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-      const state = snapshot.val();
-      if (state.cash >= cost) {
-        db.ref(`groups/${groupId}/state`).update({
-          cash: state.cash - cost,
-          materials: state.materials + qty
-        });
-        document.getElementById("materialOutput").textContent = `Bought ${qty} units for £${cost}`;
-        loadGroupState();
-        updateOverviewTable();
-      } else {
-        document.getElementById("materialOutput").textContent = `Not enough cash.`;
-      }
-    });
+  db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+    const state = snapshot.val();
+    if (state.cash >= cost) {
+      db.ref(`groups/${groupId}/state`).update({
+        cash: state.cash - cost,
+        materials: state.materials + qty
+      });
+      document.getElementById("materialOutput").textContent = `Bought ${qty} units for £${cost}`;
+      loadGroupState();
+      updateOverviewTable();
+    } else {
+      document.getElementById("materialOutput").textContent = `Not enough cash.`;
+    }
+  });
+}
+
   }
 
   function simulateProduction() {
