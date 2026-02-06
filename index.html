@@ -74,128 +74,265 @@
     th {
       background-color: #333;
     }
-    #eventModal {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.95);
-      color: white;
-      z-index: 9999;
-      padding: 40px;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
-  <div id="eventModal">
-    <h2 id="eventText">📦 Year 1: The economy is stable. Demand is average.</h2>
-    <button onclick="closeEventModal()" style="margin-top:20px; padding:10px 20px; font-size:16px;">Start Round</button>
+  <h1>📊 Supply & Demand Simulator</h1>
+
+  <div class="section">
+    <label>Select Group:</label>
+    <select id="group-select" onchange="loadGroupState()">
+      <option value="groupA">Group A</option>
+      <option value="groupB">Group B</option>
+      <option value="groupC">Group C</option>
+      <option value="groupD">Group D</option>
+      <option value="groupE">Group E</option>
+    </select>
+    <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
   </div>
 
-  <div id="mainContent" style="display:none;">
-    <h1>📊 Supply & Demand Simulator</h1>
+  <div class="section">
+    <h2>Buy Materials</h2>
+    <label>Units of materials to buy (£3/unit):</label>
+    <input type="number" id="materials-to-buy" value="1" min="1" />
+    <button onclick="buyMaterials()">Buy Materials</button>
+    <p id="materialOutput"></p>
+  </div>
 
-    <div class="section">
-      <label>Select Group:</label>
-      <select id="group-select" onchange="loadGroupState()">
-        <option value="groupA">Group A</option>
-        <option value="groupB">Group B</option>
-        <option value="groupC">Group C</option>
-        <option value="groupD">Group D</option>
-        <option value="groupE">Group E</option>
-      </select>
-      <p>Cash: <span id="cash-display">£0</span> | Labour: <span id="labour-display">0</span> | Materials: <span id="materials-display">0</span></p>
-    </div>
+  <div class="section">
+    <h2>Production</h2>
+    <label>Units to produce:</label>
+    <input type="number" id="units" value="1" min="1" />
+    <button onclick="simulateProduction()">Produce</button>
+    <p id="prodOutput"></p>
+  </div>
 
-    <div class="section">
-      <h2>Buy Materials</h2>
-      <label>Units of materials to buy (£3/unit):</label>
-      <input type="number" id="materials-to-buy" value="1" min="1" />
-      <button onclick="buyMaterials()">Buy Materials</button>
-      <p id="materialOutput"></p>
-    </div>
+  <div class="section">
+    <h2>Set Price</h2>
+    <label>Price per unit:</label>
+    <input type="number" id="price" value="10" min="1" />
+    <button onclick="submitPrice()">Submit Price</button>
+    <p id="priceOutput"></p>
+  </div>
 
-    <div class="section">
-      <h2>Production</h2>
-      <label>Units to produce:</label>
-      <input type="number" id="units" value="1" min="1" />
-      <button onclick="simulateProduction()">Produce</button>
-      <p id="prodOutput"></p>
-    </div>
+  <div class="section">
+    <h2>Instructor Controls</h2>
+    <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
+    <p>Current Round: <span id="current-round-display">1</span></p>
+  </div>
 
-    <div class="section">
-      <h2>Set Price</h2>
-      <label>Price per unit:</label>
-      <input type="number" id="price" value="10" min="1" />
-      <button onclick="submitPrice()">Submit Price</button>
-      <p id="priceOutput"></p>
-    </div>
+  <div class="section">
+    <h2>Group Resources Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th>Cash (£)</th>
+          <th>Labour</th>
+          <th>Materials</th>
+        </tr>
+      </thead>
+      <tbody id="resource-table"></tbody>
+    </table>
+  </div>
 
-    <div class="section">
-      <h2>Instructor Controls</h2>
-      <button onclick="resolveMarket()">💰 Resolve Market & Advance Round</button>
-      <p>Current Round: <span id="current-round-display">1</span></p>
-    </div>
-
-    <div class="section">
-      <h2>Group Resources Overview</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Group</th>
-            <th>Cash (£)</th>
-            <th>Labour</th>
-            <th>Materials</th>
-          </tr>
-        </thead>
-        <tbody id="resource-table"></tbody>
-      </table>
-    </div>
+  <div id="eventModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; z-index:9999; padding:40px; text-align:center;">
+    <h2 id="eventText"></h2>
+    <button onclick="closeEventModal()" style="margin-top:20px; padding:10px 20px; font-size:16px;">Start Round</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
+      authDomain: "supply-demand-sim.firebaseapp.com",
+      projectId: "supply-demand-sim",
+      storageBucket: "supply-demand-sim.appspot.com",
+      messagingSenderId: "370392861384",
+      appId: "1:370392861384:web:3e142dac960d98f7b073fd",
+      measurementId: "G-P602EV8WKN",
+      databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentRound = 1;
+    const groupList = ['groupA','groupB','groupC','groupD','groupE'];
+    const defaultState = { cash: 100, labor: 10, materials: 0 };
+
+    const demandModifiers = [
+      { round: 1, message: "📦 Year 1: The economy is stable. Demand is average." },
+      { round: 2, message: "🌊 Year 2: A flood disrupts trade routes. Demand decreases." },
+      { round: 3, message: "👶 Year 3: Population boom boosts demand significantly." },
+      { round: 4, message: "📉 Year 4: Tariffs increase costs. Demand is steady, but profit margins shrink." },
+      { round: 5, message: "🚀 Year 5: A marketing breakthrough boosts demand!" },
+      { round: 6, message: "📉 Year 6: Market saturation reduces overall demand." }
+    ];
+
+    function ensureAllGroupsInitialized() {
+      const initPromises = groupList.map(groupId =>
+        db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+          if (!snapshot.exists()) {
+            return db.ref(`groups/${groupId}/state`).set(defaultState);
+          }
+        })
+      );
+      return Promise.all(initPromises);
+    }
+
+    function afterIntroLoad() {
+      ensureAllGroupsInitialized().then(() => {
+        loadGroupState();
+        updateOverviewTable();
+      });
+    }
+
+    function showEventModal(round) {
+      const event = demandModifiers.find(e => e.round === round);
+      if (event) {
+        document.getElementById("eventText").innerText = event.message;
+        document.getElementById("eventModal").style.display = "block";
+      } else {
+        afterIntroLoad();
+      }
+    }
+
     function closeEventModal() {
       document.getElementById("eventModal").style.display = "none";
-      document.getElementById("mainContent").style.display = "block";
-      startGame();
+      afterIntroLoad();
     }
 
-    function startGame() {
-      const firebaseConfig = {
-        apiKey: "AIzaSyCCtJVh4kOMu7l0mhQcjRcTUg_cL9KD6q0",
-        authDomain: "supply-demand-sim.firebaseapp.com",
-        projectId: "supply-demand-sim",
-        storageBucket: "supply-demand-sim.appspot.com",
-        messagingSenderId: "370392861384",
-        appId: "1:370392861384:web:3e142dac960d98f7b073fd",
-        measurementId: "G-P602EV8WKN",
-        databaseURL: "https://supply-demand-sim-default-rtdb.firebaseio.com"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-
-      let currentRound = 1;
-      const groupList = ['groupA','groupB','groupC','groupD','groupE'];
-      const defaultState = { cash: 100, labor: 10, materials: 0 };
-
-      window.db = db;
-      window.currentRound = currentRound;
-      window.groupList = groupList;
-      window.defaultState = defaultState;
-
-      // Copy the rest of your functions here (initializeGroupState, loadGroupState, etc.)
-
-      loadGroupState();
-      updateOverviewTable();
+    function initializeGroupState(groupId) {
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          db.ref(`groups/${groupId}/state`).set(defaultState);
+        }
+      });
     }
+
+    function loadGroupState() {
+      const groupId = document.getElementById('group-select').value;
+      initializeGroupState(groupId);
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val() || defaultState;
+        document.getElementById("cash-display").textContent = `£${state.cash}`;
+        document.getElementById("labour-display").textContent = state.labor;
+        document.getElementById("materials-display").textContent = state.materials;
+      });
+    }
+
+    function updateOverviewTable() {
+      const table = document.getElementById("resource-table");
+      table.innerHTML = "";
+      groupList.forEach(group => {
+        db.ref(`groups/${group}/state`).once("value").then(snapshot => {
+          const state = snapshot.val() || defaultState;
+          const row = `<tr><td>${group}</td><td>£${state.cash}</td><td>${state.labor}</td><td>${state.materials}</td></tr>`;
+          table.innerHTML += row;
+        });
+      });
+    }
+
+    function buyMaterials() {
+      const groupId = document.getElementById('group-select').value;
+      const qty = parseInt(document.getElementById('materials-to-buy').value);
+      const cost = qty * 3;
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state.cash >= cost) {
+          const updatedCash = state.cash - cost;
+          const updatedMaterials = state.materials + qty;
+
+          db.ref(`groups/${groupId}/state`).update({
+            cash: updatedCash,
+            materials: updatedMaterials
+          });
+
+          document.getElementById("materialOutput").textContent = `Bought ${qty} units of materials for £${cost}.`;
+          loadGroupState();
+          updateOverviewTable();
+        } else {
+          document.getElementById("materialOutput").textContent = `Not enough cash to buy materials.`;
+        }
+      });
+    }
+
+    function simulateProduction() {
+      const units = parseInt(document.getElementById('units').value);
+      const groupId = document.getElementById('group-select').value;
+      const labourNeeded = units * 2;
+      const materialsNeeded = units * 1;
+
+      db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+        const state = snapshot.val();
+        if (state.labor >= labourNeeded && state.materials >= materialsNeeded) {
+          const newLabor = state.labor - labourNeeded;
+          const newMaterials = state.materials - materialsNeeded;
+
+          db.ref(`groups/${groupId}/state`).update({
+            labor: newLabor,
+            materials: newMaterials
+          });
+
+          document.getElementById("labour-display").textContent = newLabor;
+          document.getElementById("materials-display").textContent = newMaterials;
+
+          document.getElementById('prodOutput').textContent = `You produced ${units} units.`;
+          updateOverviewTable();
+        } else {
+          document.getElementById('prodOutput').textContent = `❌ Not enough labour or materials to produce that amount.`;
+        }
+      });
+    }
+
+    function submitPrice() {
+      const price = parseFloat(document.getElementById('price').value);
+      const produced = parseInt(document.getElementById('units').value);
+      const groupId = document.getElementById('group-select').value;
+      const roundKey = `round${currentRound}`;
+
+      db.ref(`groups/${groupId}/${roundKey}`).set({
+        price,
+        produced,
+        timestamp: Date.now()
+      });
+
+      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+    }
+
+    function resolveMarket() {
+      db.ref("groups").once("value").then(snapshot => {
+        const groups = snapshot.val();
+        for (let group in groups) {
+          const rounds = groups[group];
+          const state = rounds.state || { cash: 0 };
+          const lastRoundKey = `round${currentRound}`;
+          const roundData = rounds[lastRoundKey];
+          if (roundData && roundData.price && roundData.produced) {
+            const unitsSold = Math.max(0, 100 - roundData.price * 2);
+            const sold = Math.min(unitsSold, roundData.produced);
+            const revenue = roundData.price * sold;
+            const updatedCash = state.cash + revenue;
+
+            db.ref(`groups/${group}/state`).update({
+              cash: updatedCash,
+              labor: defaultState.labor
+            });
+
+            db.ref(`groups/${group}/${lastRoundKey}/revenue`).set(revenue);
+            db.ref(`groups/${group}/${lastRoundKey}/sold`).set(sold);
+          }
+        }
+        currentRound++;
+        document.getElementById("current-round-display").textContent = currentRound;
+        showEventModal(currentRound);
+        loadGroupState();
+        updateOverviewTable();
+      });
+    }
+
+    showEventModal(currentRound);
   </script>
 </body>
 </html>
