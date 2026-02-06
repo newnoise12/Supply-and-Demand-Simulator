@@ -152,6 +152,7 @@
   const db = firebase.database();
 
   let currentRound = 1;
+  const MAX_ACCEPTABLE_PRICE = 20;
   const groupList = ['groupA', 'groupB', 'groupC', 'groupD', 'groupE'];
   const defaultState = { cash: 100, labor: 10, materials: 0 };
   let currentMaterialPrice = 3;
@@ -176,31 +177,19 @@
     return Promise.all(initPromises);
   }
 
-function showEventModal(round) {
-  const event = demandModifiers.find(e => e.round === round);
-  if (event) {
-    currentMaterialPrice = event.materialPrice;
-    document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
-
-    let message = event.message;
-    if (round === 1) {
-      message += `
-
-🧠 Game Instructions:
-- Each group starts with £100 cash, 10 labour units, and 0 materials.
-- Buy materials (£${currentMaterialPrice} per unit) to enable production.
-- Each unit produced requires 2 labour and 1 material.
-- Set your price per unit after production.
-- After each round, sales are resolved based on total market supply and demand.
-- Labour increases each round. Materials must be bought.
-- Demand varies each round and affects how many units can be sold.`;
+  function showEventModal(round) {
+    const event = demandModifiers.find(e => e.round === round);
+    if (event) {
+      currentMaterialPrice = event.materialPrice;
+      document.getElementById("material-price").textContent = `£${currentMaterialPrice}`;
+      let introMessage = '';
+      if (round === 1) {
+        introMessage = `\n\n🧠 Game Instructions:\n- Each group starts with £100 cash, 10 labour units, and 0 materials.\n- Buy materials (£${currentMaterialPrice} per unit) to enable production.\n- Each unit produced requires 2 labour and 1 material.\n- Set your price per unit after production.\n- After each round, sales are resolved based on total market supply and demand.\n- Labour refreshes each round. Materials must be bought.\n- Max acceptable price: £${MAX_ACCEPTABLE_PRICE} — setting a higher price will result in zero sales.`;
+      }
+      document.getElementById("eventText").innerText = event.message + introMessage;
+      document.getElementById("eventModal").style.display = "block";
     }
-
-    document.getElementById("eventText").innerText = message;
-    document.getElementById("eventModal").style.display = "block";
   }
-}
-
 
   function closeEventModal() {
     document.getElementById("eventModal").style.display = "none";
@@ -231,25 +220,25 @@ function showEventModal(round) {
   }
 
   function buyMaterials() {
-  const groupId = document.getElementById('group-select').value;
-  const qty = parseInt(document.getElementById('materials-to-buy').value);
-  const cost = qty * currentMaterialPrice;
+    const groupId = document.getElementById('group-select').value;
+    const qty = parseInt(document.getElementById('materials-to-buy').value);
+    const cost = qty * currentMaterialPrice;
 
-  db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
-    const state = snapshot.val();
-    if (state.cash >= cost) {
-      db.ref(`groups/${groupId}/state`).update({
-        cash: state.cash - cost,
-        materials: state.materials + qty
-      });
-      document.getElementById("materialOutput").textContent = `Bought ${qty} units for £${cost}`;
-      loadGroupState();
-      updateOverviewTable();
-    } else {
-      document.getElementById("materialOutput").textContent = `Not enough cash.`;
-    }
-  });
-}
+    db.ref(`groups/${groupId}/state`).once("value").then(snapshot => {
+      const state = snapshot.val();
+      if (state.cash >= cost) {
+        db.ref(`groups/${groupId}/state`).update({
+          cash: state.cash - cost,
+          materials: state.materials + qty
+        });
+        document.getElementById("materialOutput").textContent = `Bought ${qty} units for £${cost}`;
+        loadGroupState();
+        updateOverviewTable();
+      } else {
+        document.getElementById("materialOutput").textContent = `Not enough cash.`;
+      }
+    });
+  }
 
   function simulateProduction() {
     const groupId = document.getElementById('group-select').value;
@@ -279,13 +268,17 @@ function showEventModal(round) {
     const groupId = document.getElementById('group-select').value;
     const roundKey = `round${currentRound}`;
 
+    if (price > MAX_ACCEPTABLE_PRICE) {
+      document.getElementById("priceOutput").textContent = `⚠️ Warning: £${price} exceeds market limit of £${MAX_ACCEPTABLE_PRICE}. No one may buy at this price.`;
+    } else {
+      document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
+    }
+
     db.ref(`groups/${groupId}/${roundKey}`).set({
       price,
       produced,
       timestamp: Date.now()
     });
-
-    document.getElementById("priceOutput").textContent = `Submitted: £${price} per unit.`;
   }
 
   function resolveMarket() {
@@ -314,6 +307,16 @@ function showEventModal(round) {
         const groupData = groupRoundData[group];
         const state = groups[group].state || defaultState;
 
+        if (groupData.price > MAX_ACCEPTABLE_PRICE) {
+          db.ref(`groups/${group}/round${currentRound}/sold`).set(0);
+          db.ref(`groups/${group}/round${currentRound}/revenue`).set(0);
+
+          if (group === document.getElementById('group-select').value) {
+            document.getElementById("group-feedback").textContent = `❌ £${groupData.price} is too expensive. The market refused to buy your goods.`;
+          }
+          continue;
+        }
+
         const share = groupData.produced / totalProduced;
         const unitsSold = Math.min(groupData.produced, Math.floor(share * adjustedDemand));
         const revenue = unitsSold * groupData.price;
@@ -325,22 +328,19 @@ function showEventModal(round) {
 
         db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
         db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
-        db.ref(`groups/${group}/round${currentRound}/sold`).set(unitsSold);
-        db.ref(`groups/${group}/round${currentRound}/revenue`).set(revenue);
+
         let feedback = "";
+        if (unitsSold === 0) {
+          feedback = "❌ None of your goods sold. Likely oversupply or pricing too high.";
+        } else if (unitsSold < groupData.produced) {
+          feedback = `⚠️ Partial sales: You sold ${unitsSold} of ${groupData.produced} units.`;
+        } else {
+          feedback = "✅ You sold all your units. Strong pricing or favourable market.";
+        }
 
-if (unitsSold === 0) {
-  feedback = "❌ None of your goods sold. Likely oversupply or pricing too high.";
-} else if (unitsSold < groupData.produced) {
-  feedback = `⚠️ Partial sales: You sold ${unitsSold} of ${groupData.produced} units.`;
-} else {
-  feedback = "✅ You sold all your units. Strong pricing or favourable market.";
-}
-
-// Only update feedback for the currently selected group
-if (group === document.getElementById('group-select').value) {
-  document.getElementById("group-feedback").textContent = feedback;
-}
+        if (group === document.getElementById('group-select').value) {
+          document.getElementById("group-feedback").textContent = feedback;
+        }
       }
 
       currentRound++;
